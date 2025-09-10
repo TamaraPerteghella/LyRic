@@ -49,3 +49,5 @@ The pipeline repository contains a small datasets that can be used for testing. 
 ```
 snakemake
 ```
+
+The test takes approximately half an hour to complete.
