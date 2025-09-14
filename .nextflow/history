@@ -1,0 +1,23 @@
+2025-09-12 22:40:00	-	soggy_varahamihira	-	fdd6fa9d99eb1e104cdba4708122eeb6	bdaab1bf-ec03-44f6-9bcf-8652f2f89e3d	nextflow workflow/Workflow.nf
+2025-09-12 22:41:26	-	loquacious_leakey	-	173303ba7ea1c7bb50c9e9b9e73666ff	3370e589-14bf-4287-87f1-d146b1c6872f	nextflow workflow/Workflow.nf
+2025-09-12 22:42:49	-	loving_wright	-	173303ba7ea1c7bb50c9e9b9e73666ff	da957119-3246-428e-b15b-c885d83dabe0	nextflow Workflow.nf
+2025-09-12 22:43:36	-	backstabbing_wescoff	-	173303ba7ea1c7bb50c9e9b9e73666ff	83b43b09-7d1e-4165-a3ca-15cf9b429626	nextflow run Workflow.nf
+2025-09-12 22:44:50	-	dreamy_pasteur	-	e687b92a790b723d676e400ff0424b25	2500f6b1-2784-4acf-97bc-7592e89564e3	nextflow run main.nf
+2025-09-12 22:48:46	-	voluminous_dalembert	-	60bd55f6cb47ba169566ec0a74cba781	139021e9-bc4b-4a3b-8e15-a1fea2a30239	nextflow run main.nf
+2025-09-12 22:51:10	-	crazy_kalam	-	60bd55f6cb47ba169566ec0a74cba781	9a41838a-bcb2-48a3-accd-e82b2816060a	nextflow run main.nf
+2025-09-12 22:56:18	-	curious_pare	-	60bd55f6cb47ba169566ec0a74cba781	73f1af75-5e58-4ac2-b124-19f0533fc6e4	nextflow run main.nf
+2025-09-12 22:57:39	-	voluminous_galileo	-	bac387d73e8a88a21fc68ccb6ca55cb2	bb37f671-e128-49d5-89cb-9120274acbee	nextflow run main.nf
+2025-09-12 22:58:34	-	gigantic_raman	-	7e46894f63d236329e053d261375c55c	2d244d90-dc57-4e58-a1c7-09805e7548b6	nextflow run main.nf
+2025-09-12 22:59:32	-	clever_hoover	-	41965cc4d1f774b058fbab7d702e835a	825ed7e8-5cbf-4bed-8f57-e9fbaddb5ea0	nextflow run main.nf
+2025-09-12 23:00:37	-	furious_wing	-	f7e01112556879545c444924c7db3ed9	e595f376-20ce-42c3-9fda-278485732993	nextflow run main.nf
+2025-09-12 23:03:15	-	berserk_yalow	-	f7e01112556879545c444924c7db3ed9	0b3c09e3-b39d-4cf8-b91a-1521bc3fbc26	nextflow run main.nf
+2025-09-12 23:05:05	-	astonishing_moriondo	-	f7e01112556879545c444924c7db3ed9	bc9d80a4-29e3-4048-a0fe-95144a685c49	nextflow run main.nf -c config/nextflow.config
+2025-09-12 23:09:28	-	compassionate_picasso	-	f7e01112556879545c444924c7db3ed9	49a8e361-c641-4ac8-a8d7-be170e17916d	nextflow run main.nf -c config/nextflow.config
+2025-09-12 23:11:32	-	zen_baekeland	-	f7e01112556879545c444924c7db3ed9	27a0cb81-6f37-4d4f-9aa3-012840409f1a	nextflow run main.nf -c config/nextflow.config
+2025-09-12 23:15:57	-	confident_hodgkin	-	f7e01112556879545c444924c7db3ed9	cb45c695-17df-4932-b563-eb6ded9e98b6	nextflow run main.nf -c config/nextflow.config
+2025-09-12 23:17:20	-	golden_brazil	-	f7e01112556879545c444924c7db3ed9	6ca94e17-00a8-4a26-86f2-22000e3cbc19	nextflow run main.nf -c config/nextflow.config
+2025-09-12 23:18:41	-	intergalactic_almeida	-	f7e01112556879545c444924c7db3ed9	74aba355-b759-4507-8169-2d246c32f464	nextflow run main.nf -c config/nextflow.config
+2025-09-12 23:21:18	-	grave_woese	-	f7e01112556879545c444924c7db3ed9	b6daf4cb-b15e-4b1a-a094-158e5ca26174	nextflow run main.nf -c config/nextflow.config
+2025-09-12 23:22:26	-	backstabbing_feynman	-	f7e01112556879545c444924c7db3ed9	703744ce-de88-40d0-ac9f-0f0f5cfcc4d7	nextflow run main.nf -c config/nextflow.config
+2025-09-12 23:23:55	-	backstabbing_pauling	-	f7e01112556879545c444924c7db3ed9	a5aa2e98-b433-4bd4-98db-9ff1e061570c	nextflow run main.nf -c config/nextflow.config
+2025-09-12 23:26:14	-	loving_raman	-	f7e01112556879545c444924c7db3ed9	600e531d-38ce-436e-af15-8a81d4c79e3b	nextflow run main.nf -c config/nextflow.config
