@@ -1,12 +1,14 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
+nextflow.preview.output = true
+
 // Import everything from helpers.nf
 include { fastqStats } from './processes/fastqStats.nf'
 
 
 // Define the main workflow
 workflow {
-
+    main:
     def fastq_ch = Channel.fromPath("${params.datadir}/*.fastq.gz")
         .map { file ->
             def base = file.name.replaceAll(/\.fastq\.gz$/, '')
@@ -18,7 +20,6 @@ workflow {
     }
 
     workflow.onError { t ->
-        // t is a Throwable
         if (t != null) {
             println("LyRic workflow finished with errors: ${t.message}")
         }
@@ -29,4 +30,30 @@ workflow {
 
     // Call the process or workflow from helpers.nf
     fastqStats(fastq_ch)
+
+    statfiles = fastqStats.out.timestamp_fastq.concat(fastqStats.out.aggregate_summary)
+    qcfiles = fastqStats.out.qc_ch
+    plotfiles = fastqStats.out.read_length_plot
+    tmpstatsfile = fastqStats.out.readlength_ch.map { t -> t[1] }.concat(fastqStats.out.readlength_summary_ch)
+
+    publish:
+    qc = qcfiles
+    stats = statfiles
+    stats_tmp = tmpstatsfile
+    plots = plotfiles
+}
+
+output {
+    qc {
+        path { fastqc -> "${params.qcdir}/" }
+    }
+    plots {
+        path { plt -> "${params.plotdir}/" }
+    }
+    stats {
+        path { stat -> "${params.statsdir}/" }
+    }
+    stats_tmp {
+        path { stat -> "${params.statsdir}/tmp/" }
+    }
 }

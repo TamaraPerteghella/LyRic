@@ -10,3 +10,6 @@ cd snakemake8_lyrictest/bin/
 
 cd ../../
 snakemake --cores 1
+
+# With nextflow
+nextflow -c config/nextflow.config run main.nf --with-singularity ghcr.io/guigolab/lyric:0.2.0

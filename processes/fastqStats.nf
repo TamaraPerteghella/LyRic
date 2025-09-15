@@ -104,7 +104,7 @@ process plotReadLength {
 
     script:
     """
-    mkdir -p ${params.plotdir}/readLength.stats/
+    mkdir -p ${params.plotdir}
     plotReadLength.R ${readlength_file} ${file_name}_readLength.stats.pdf
     """
 }
@@ -115,11 +115,19 @@ workflow fastqStats {
     fastq_ch
 
     main:
-    def qc_ch = basicFASTQqc(fastq_ch)
-    fastqTimestamps(qc_ch)
+    qc_ch = basicFASTQqc(fastq_ch)
+    timestamp_fastq = fastqTimestamps(qc_ch)
 
-    def (readlength_ch, readlength_summary_ch) = getReadLengthSummary(fastq_ch)
-    aggReadLengthSummary(readlength_summary_ch)
+    (readlength_ch, readlength_summary_ch) = getReadLengthSummary(fastq_ch)
+    aggregate_summary = aggReadLengthSummary(readlength_summary_ch)
 
-    plotReadLength(readlength_ch)
+    read_length_plot = plotReadLength(readlength_ch)
+
+    emit:
+    qc_ch
+    readlength_ch
+    readlength_summary_ch
+    aggregate_summary
+    read_length_plot
+    timestamp_fastq
 }
