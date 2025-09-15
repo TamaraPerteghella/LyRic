@@ -10,11 +10,28 @@ include { fastqStats } from './processes/fastqStats.nf'
 workflow {
     main:
 
-    def fastq_ch = Channel.fromPath("${params.datadir}/*.fastq.gz")
-        .map { file ->
-            def base = file.name.replaceAll(/\.fastq\.gz$/, '')
-            tuple(base, file)
-        }
+    def annotation = file("${launchDir}/config/sample_annotations.tsv")
+
+    if (annotation.exists()) {
+        println("Using files listed in: ${annotation}")
+
+        fastq_ch = Channel.fromPath("${launchDir}/config/sample_annotations.tsv")
+            .splitText()
+            .filter { !it.startsWith("absolute_path") }
+            .map { line ->
+                def (filePath, filename) = line.split('\t')[0..1]
+                tuple(filename, file(filePath))
+            }
+    }
+    else {
+        println("Expecting files in: ${params.datadir}/")
+        fastq_ch = Channel.fromPath("${params.datadir}/*.fastq.gz")
+            .map { file ->
+                def base = file.name.replaceAll(/\.fastq\.gz$/, '')
+                tuple(base, file)
+            }
+    }
+
 
     workflow.onComplete {
         println("LyRic workflow finished smoothly.")
