@@ -19,6 +19,12 @@ workflow.onError { t ->        // t is a Throwable
 // Define the main workflow
 workflow {
 
+    def fastq_ch = Channel.fromPath("${params.datadir}/*.fastq.gz")
+        .map { file ->
+            def base = file.name.replaceAll(/\.fastq\.gz$/, '')
+            tuple(base, file)
+        }
+
     // Call the process or workflow from helpers.nf
-    fastqStats()
+    fastqStats(fastq_ch)
 }

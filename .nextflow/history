@@ -21,3 +21,17 @@
 2025-09-12 23:22:26	-	backstabbing_feynman	-	f7e01112556879545c444924c7db3ed9	703744ce-de88-40d0-ac9f-0f0f5cfcc4d7	nextflow run main.nf -c config/nextflow.config
 2025-09-12 23:23:55	-	backstabbing_pauling	-	f7e01112556879545c444924c7db3ed9	a5aa2e98-b433-4bd4-98db-9ff1e061570c	nextflow run main.nf -c config/nextflow.config
 2025-09-12 23:26:14	-	loving_raman	-	f7e01112556879545c444924c7db3ed9	600e531d-38ce-436e-af15-8a81d4c79e3b	nextflow run main.nf -c config/nextflow.config
+2025-09-15 10:04:08	-	goofy_boltzmann	-	f7e01112556879545c444924c7db3ed9	49f6252c-9165-43a5-a102-ee604b296903	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:05:13	-	compassionate_solvay	-	f7e01112556879545c444924c7db3ed9	8131c482-9a53-4368-85e2-a1ee247b5e2b	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:05:47	-	peaceful_caravaggio	-	f7e01112556879545c444924c7db3ed9	7aff35bb-6113-496d-b9ec-afadd5972df9	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:06:24	1.9s	gigantic_hopper	OK	f7e01112556879545c444924c7db3ed9	9b1c2d5f-c7c6-4c0b-a1d8-00b9e48cf0ee	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:09:33	1.8s	tiny_pasteur	OK	f7e01112556879545c444924c7db3ed9	d49f9b58-bfe4-4914-89f6-e3a61c58b95a	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:10:18	2.8s	chaotic_mclean	ERR	f7e01112556879545c444924c7db3ed9	ff9a1cf6-1d85-4051-8dd7-707568849798	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:35:10	-	condescending_liskov	-	f7e01112556879545c444924c7db3ed9	5f6f642b-8b65-4311-9da4-05867503a090	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:36:26	2.4s	nostalgic_laplace	ERR	f7e01112556879545c444924c7db3ed9	80f7428b-a024-4d80-a145-a450ba0861c1	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:37:14	-	trusting_banach	-	7f3510352a8a026e4f949d3cde5e74fb	9cc00b3a-df69-4f53-90d7-79f34d3d29e9	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:38:29	2.3s	stupefied_wing	ERR	7f3510352a8a026e4f949d3cde5e74fb	9ad85578-87f6-4767-b252-3f98d7b1d812	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:41:02	2.2s	nice_pauling	ERR	7f3510352a8a026e4f949d3cde5e74fb	1e81fc72-8e68-4026-933d-1bbfcf55ad5e	nextflow -c config/nextflow.config run main.nf
+2025-09-15 10:44:25	2s	astonishing_almeida	ERR	7f3510352a8a026e4f949d3cde5e74fb	321da422-f88e-4769-ac40-5b176ce926a1	nextflow -c config/nextflow.config run main.nf --with-singularity 'ghcr.io/guigolab/lyric:0.2.0'
+2025-09-15 10:46:00	2.1s	nasty_wegener	ERR	7f3510352a8a026e4f949d3cde5e74fb	2f655cad-b15f-4f63-b9c8-2226d4065fe9	nextflow -c config/nextflow.config run main.nf --with-singularity 'ghcr.io/guigolab/lyric:0.2.0'
+2025-09-15 10:46:32	2.6s	cranky_panini	ERR	7f3510352a8a026e4f949d3cde5e74fb	2220c1b1-d58e-47ac-b298-fb55e731bafd	nextflow -c config/nextflow.config run main.nf --with-singularity 'ghcr.io/guigolab/lyric:0.2.0'

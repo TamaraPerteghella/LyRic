@@ -1,28 +1,25 @@
-def QC_DIR = "${params.outputdir}/qc"
-
-
 // Check for duplicate IDs in fastq
 process basicFASTQqc {
-    
+
     tag { file_name }
 
     input:
     tuple val(file_name), path(fastq)
 
     output:
-    path("${QC_DIR}/${file_name}.dupl.txt")
+    path "${params.qcdir}/${file_name}.dupl.txt"
 
     script:
     """
-    mkdir -p ${QC_DIR}
+    mkdir -p ${params.qcdir}
 
     # check that there are no read ID duplicates
-    zcat $fastq | fastq2tsv.pl | awk '{print \$1}' | sort --parallel=${params.threads} -T \$TMPDIR | uniq -dc > ${QC_DIR}/${file_name}.dupl.txt
+    zcat ${fastq} | fastq2tsv.pl | awk '{print \$1}' | sort --parallel=${params.threads} -T \$TMPDIR | uniq -dc > ${params.qcdir}/${file_name}.dupl.txt
 
-    count=\$(cat ${QC_DIR}/${file_name}.dupl.txt | wc -l)
+    count=\$(cat ${params.qcdir}/${file_name}.dupl.txt | wc -l)
     if [ \$count -gt 0 ]; then
         echo "\$count duplicate read IDs found"
-        mv ${QC_DIR}/${file_name}.dupl.txt ${QC_DIR}/${file_name}.dupl.txt.tmp
+        mv ${params.qcdir}/${file_name}.dupl.txt ${params.qcdir}/${file_name}.dupl.txt.tmp
         exit 1
     fi
     """
@@ -55,7 +52,7 @@ process fastqTimestamps {
 
 
 // get read lengths for all FASTQ files:
-process getReadLengthSummary{
+process getReadLengthSummary {
     tag { file_name }
     conda "../envs/R_env.yml"
 
@@ -63,7 +60,7 @@ process getReadLengthSummary{
     tuple val(file_name), path(fastq)
 
     output:
-    tuple val(file_name), path("${params.statsdir}/tmp/${file_name}.readlength.tsv.gz") 
+    tuple val(file_name), path("${params.statsdir}/tmp/${file_name}.readlength.tsv.gz")
     path "${params.statsdir}/tmp/${file_name}.readlengthSummary.tsv"
 
     script:
@@ -77,12 +74,12 @@ process getReadLengthSummary{
 }
 
 
-process aggReadLengthSummary{
+process aggReadLengthSummary {
     tag "Aggregate read length summaries"
 
     input:
     path readlength_files
-    
+
     output:
     path "${params.statsdir}/all.readlength.summary.tsv"
 
@@ -90,11 +87,11 @@ process aggReadLengthSummary{
     """
     head -n1 ${readlength_files[0]} > ${params.statsdir}/all.readlength.summary.tsv
     tail -q -n+2 ${readlength_files} | sort --parallel=${params.threads} >> ${params.statsdir}/all.readlength.summary.tsv
-    """ 
+    """
 }
 
 // plot histograms with R:
-process plotReadLength{
+process plotReadLength {
 
     tag { file_name }
     conda "../envs/R_env.yml"
@@ -114,15 +111,15 @@ process plotReadLength{
 
 
 workflow fastqStats {
-    def fastq_ch = Channel.fromPath("${params.datadir}/*.fastq.gz")
-        .map { file ->
-            def base = file.name.replaceAll(/\.fastq\.gz$/, '')
-            tuple(base, file)
-        }
+    take:
+    fastq_ch
 
+    main:
     def qc_ch = basicFASTQqc(fastq_ch)
     fastqTimestamps(qc_ch)
-    def readlength_ch, readlength_summary_ch = getReadLengthSummary(fastq_ch)
+
+    def (readlength_ch, readlength_summary_ch) = getReadLengthSummary(fastq_ch)
+
     aggReadLengthSummary(readlength_summary_ch)
     plotReadLength(readlength_ch)
 }
