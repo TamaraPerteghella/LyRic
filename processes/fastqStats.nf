@@ -115,34 +115,11 @@ workflow fastqStats {
     fastq_ch
 
     main:
-    def qc_ch = basicFASTQqc(fastq_ch).map { file ->
-        file.moveTo("${params.qcdir}/${file.name}")
-        return file
-    }
-
-    fastqTimestamps(qc_ch).map { file ->
-        file.moveTo("${params.statsdir}/${file.name}")
-        return file
-    }
+    def qc_ch = basicFASTQqc(fastq_ch)
+    fastqTimestamps(qc_ch)
 
     def (readlength_ch, readlength_summary_ch) = getReadLengthSummary(fastq_ch)
-    readlength_ch.map { file ->
-        file.moveTo("${params.statsdir}/${file.name}")
-        return file
-    }
+    aggReadLengthSummary(readlength_summary_ch)
 
-    readlength_summary_ch.map { file ->
-        file.moveTo("${params.statsdir}/${file.name}")
-        return file
-    }
-
-    aggReadLengthSummary(readlength_summary_ch).map { file ->
-        file.moveTo("${params.statsdir}/${file.name}")
-        return file
-    }
-
-    plotReadLength(readlength_ch).map { file ->
-        file.moveTo("${params.plotdir}/readLength.stats/${file.name}")
-        return file
-    }
+    plotReadLength(readlength_ch)
 }

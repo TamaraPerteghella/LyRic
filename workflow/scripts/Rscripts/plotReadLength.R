@@ -1,10 +1,8 @@
 #!/usr/bin/env Rscript
 library(ggplot2)
-library(cowplot)
 library(scales)
 library(gridExtra)
 library(grid)
-library(ggplotify)
 library(dplyr)
 library(data.table)
 
@@ -12,12 +10,12 @@ args <- commandArgs(trailingOnly=TRUE)
 input_file <- args[1]
 output_file <- args[2]
 
-dat<-fread(input_file, header=T, sep='\t')
+dat <- fread(input_file, header=T, sep='\t')
 
-datSum <- dat %>% group_by(file_name) %>% summarise(n=n(), med=median(length))
+datSum <- dat %>% group_by(sample_name) %>% summarise(n=n(), med=median(length))
 summaryStats <- transform(datSum, LabelN = paste0('N= ', comma(n)), LabelM = paste0( 'Median= ', comma(med)))
 
-plotBase <- ggplot(dat, aes(x=length)) +
+plt <- ggplot(dat, aes(x=length)) +
 geom_histogram(aes(y=..density..), binwidth=100) +
 geom_vline(data = summaryStats, aes(xintercept=med), color='#ff0055', linetype='solid', size=2) +
 geom_text(data = summaryStats, aes(label = LabelN, x = Inf, y = Inf), hjust=1, vjust=1, size=15, fontface = 'bold') +
@@ -33,4 +31,4 @@ theme(axis.text= element_text(size=20), axis.ticks = element_line(size=2),
     legend.title=element_text(size=15), legend.text=element_text(size=15), strip.text = element_text(size = 15)) + 
 theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
-save_plot(output_file)
+ggsave(plot = plt, filename = output_file)
