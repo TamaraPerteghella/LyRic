@@ -9,6 +9,7 @@ include { fastqStats } from './processes/fastqStats.nf'
 // Define the main workflow
 workflow {
     main:
+
     def fastq_ch = Channel.fromPath("${params.datadir}/*.fastq.gz")
         .map { file ->
             def base = file.name.replaceAll(/\.fastq\.gz$/, '')
