@@ -34,22 +34,22 @@ facets <- function(plt, samples) {
 
 
 publish <- function(plt, output_file, samples) {
-    plt <- plt +
+    plt <- plt + theme_minimal(base_size = 10) +
         theme(
-            axis.text = element_text(size = 20),
+            axis.text = element_text(size = rel(1)),
+            axis.text.x = element_text(angle = 45, hjust = 1),
             axis.ticks = element_line(size = 2),
-            axis.line = element_line(colour = "#595959", size = 2),
-            axis.title = element_text(size = 30),
-            panel.grid.major = element_line(colour = "#d9d9d9", size = 2),
-            panel.grid.minor = element_line(colour = "#e6e6e6", size = 2),
+            axis.line = element_line(colour = "#595959", size = 0.5),
+            axis.title = element_text(size = rel(1)),
+            panel.grid.major = element_line(colour = "#d9d9d9", size = 0.3),
+            panel.grid.minor = element_line(colour = "#e6e6e6", size = 0.3),
             panel.border = element_blank(), panel.background = element_blank(),
             strip.background = element_rect(colour = "#737373", fill = "white"),
             legend.key.size = unit(0.5, "line"),
-            legend.title = element_text(size = 15),
-            legend.text = element_text(size = 15),
-            strip.text = element_text(size = 15)
-        ) +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+            legend.title = element_text(size = rel(1)),
+            legend.text = element_text(size = rel(1)),
+            strip.text = element_text(size = rel(1))
+        )
 
-    ggsave(plot = plt, filename = output_file, dpi = 300, height = 12 * samples, width = 12 * samples, units = "in", limitsize = FALSE)
+    ggsave(plot = plt, filename = output_file, dpi = 300, height = 5, width = 5, units = "in", limitsize = FALSE, scale = samples)
 }
