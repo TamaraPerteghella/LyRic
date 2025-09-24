@@ -60,7 +60,7 @@ process bamqc {
 
     script:
     """
-    mkdir -p ${params.longmappingsdir}/bamqc
+    mkdir -p ${params.longmappingsdir}/qc/bamqc
     unset DISPLAY #for JAVA
     qualimap bamqc -bam "${file_name}.bam" -outdir \${file_name}/ --java-mem-size=25G
     qualimapReportToTsv.pl "${file_name}/genome_results.txt" | cut -f2,3 | grep -v globalErrorRate | sed 's/PerMappedBase//' | awk -v s=\${file_name}'{{print s"\\t"${file_name}"\\t"}}' > ".sequencingError.stats.tsv"
@@ -77,7 +77,7 @@ process aggBamqcStats {
     script:
     """
     echo -e "sample_name\\terrorCategory\\terrorRate" > all.sequencingError.stats.tsv
-    cat ${sequencingError_file} | sort --parallel=${params.threads} >> {all.sequencingError.stats.tsv
+    cat ${sequencingError_file} | sort --parallel=${params.threads} >> all.sequencingError.stats.tsv
     """
 }
 
@@ -110,6 +110,7 @@ process makeBigWigExonicRegions {
 
     script:
     """
+    mkdir -p ${params.longmappingsdir}/exonic_bigwigs
     cat ${params.annotation} | awk -F"\\t" ' ${params.TMPDIR} == "exon" ' > ${file_name}/exonic.gff
     bedtools intersect -split -u -a ${params.TMPDIR}.bam -b ${file_name}/exonic.gff > ${file_name}.tmp.bam
     samtools index ${file_name}.tmp.bam
@@ -261,6 +262,7 @@ process readBamToBed {
 
     script:
     """
+    mkdir -p ${params.longmappingsdir}/readBamToBed
     bedtools bamtobed -i ${file_name}.bam -bed12 \
       | perl -ne '\$line=\$_; @line=split("\\t", \$line); @blockSizes=split(",", \$line[10]); \$allExonsOK=1; foreach \$block (@blockSizes){ if (\$block<2){ \$allExonsOK=0; last; } }; if (\$allExonsOK==1){ print \$line }' \
       | sort --parallel=${params.threads} -T ${params.TMPDIR} -k1,1 -k2,2n -k3,3n \
@@ -277,6 +279,7 @@ process readBedToGff {
 
     script:
     """
+    mkdir -p ${params.longmappingsdir}/readBedToGff
     zcat "${file_name}.bed.gz" | bed12togff | sort --parallel=${params.threads} -T ${params.TMPDIR} -k1,1 -k4,4n -k5,5n | gzip > "${file_name}.gff.gz"
     """
 }
@@ -293,6 +296,7 @@ process getReadBiotypeClassification {
 
     script:
     """
+    mkdir -p ${params.longmappingsdir}/reads2biotypes
     bedtools bamtobed -i ${file_name}.bam -bed12 \
       | bedtools intersect -split -wao -bed -a - -b ${params.annotation} | grep -v '^ERCC' | grep -v '^SIRV' \
       | perl -lane '\$gid="NA"; \$gt="nonExonic"; if(/gene_id "(\\S+)";/){\$gid=\$1} if(/gene_type "(\\S+)";/){\$gt=\$1} print "\$F[3]\\t\$gid\\t\$gt\\t\$F[-1]"' \
