@@ -18,7 +18,7 @@ build_data <- function(data) {
 
 
 facets <- function(plt, samples) {
-    if (ncol(annotation) == 2) {
+    if (ncol(annotation) == 3 && length(unique(annotation[3])) == 1) {
         return(plt)
     } else if (ncol(annotation) == 3) {
         facet_organisation <- paste("~", feature1)

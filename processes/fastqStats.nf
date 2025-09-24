@@ -4,7 +4,7 @@ process basicFASTQqc {
     tag { file_name }
 
     input:
-    tuple val(file_name), path(fastq)
+    tuple val(file_name), path(fastq), val(tech)
 
     output:
     path "${file_name}.dupl.txt"
@@ -57,7 +57,7 @@ process getReadLengthSummary {
     conda "../envs/R_env.yml"
 
     input:
-    tuple val(file_name), path(fastq)
+    tuple val(file_name), path(fastq), val(tech)
 
     output:
     tuple val(file_name), path("${file_name}.readlength.tsv.gz")

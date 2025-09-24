@@ -4,6 +4,7 @@ nextflow.preview.output = true
 
 // Import everything from helpers.nf
 include { fastqStats } from './processes/fastqStats.nf'
+include { lrMapping } from './processes/lrMapping.nf'
 
 
 // Define the main workflow
@@ -19,7 +20,7 @@ workflow {
             .splitText()
             .filter { !it.startsWith("absolute_path") }
             .map { line ->
-                def (filePath, filename) = line.split('\t')[0..1]
+                def (filePath, filename) = line.split('\t')[0..2]
                 tuple(filename, file(filePath))
             }
     }
@@ -54,11 +55,39 @@ workflow {
     plotfiles = fastqStats.out.read_length_plot
     tmpstatsfile = fastqStats.out.readlength_ch.map { t -> t[1] }.concat(fastqStats.out.readlength_summary_ch)
 
+    lrMapping(fastq_ch)
+
+    long_reads = lrMapping.out.mappings.concat(lrMapping.out.indexes)
+    bwigs = lrMapping.out.bigwigs
+
+    lr_bamqc = lrMapping.out.bamqc_ch
+    lr_qc = lrMapping.out.dupl
+
+    statfiles = statfiles.concat(lrMapping.out.agg_stats).concat(lrMapping.out.matrix).concat(lrMapping.out.allbasic).concat(lrMapping.out.allspikes)
+    plotfiles = plotfiles.concat(lrMapping.out.plots).concat(lrMapping.out.density).concat(lrMapping.out.heatmap).concat(lrMapping.out.plot_stats).concat(lrMapping.out.plot_spikeins)
+
+
+    exonic_bw = lrMapping.out.exonic_bigwigs
+    lr_bed = lrMapping.out.beds
+    lr_gffs = lrMapping.out.gffs
+
+    biotype_class = lrMapping.out.biotype_class
+    statfiles = statfiles.concat(lrMapping.out.biotype_stats)
+    plotfiles = plotfiles.concat(lrMapping.out.plot_biotype_stats)
+
     publish:
     qc = qcfiles
     stats = statfiles
     stats_tmp = tmpstatsfile
     plots = plotfiles
+    long_reads_mappings = long_reads
+    long_reads_bwig = bwigs
+    long_reads_bamqc = lr_bamqc
+    long_reads_exonic_bwig = exonic_bw
+    long_reads_qc = lr_qc
+    long_reads_bed = lr_bed
+    long_reads_gff = lr_gffs
+    btp = biotype_class
 }
 
 output {
@@ -73,5 +102,29 @@ output {
     }
     stats_tmp {
         path { stat -> "${params.statsdir}/tmp/" }
+    }
+    long_reads_mappings {
+        path { lrm -> "${params.longmappingsdir}" }
+    }
+    long_reads_bwig {
+        path { lrb -> "${params.longmappingsdir}/bigwigs/" }
+    }
+    long_reads_bamqc {
+        path { lrq -> "${params.longmappingsdir}/qc/bamqc/" }
+    }
+    long_reads_exonic_bwig {
+        path { lre -> "${params.longmappingsdir}/exonic_bigwigs/" }
+    }
+    long_reads_qc {
+        path { lrq -> "${params.longmappingsdir}/qc/" }
+    }
+    long_reads_bed {
+        path { lrb -> "${params.longmappingsdir}/readBamToBed/" }
+    }
+    long_reads_gff {
+        path { lrg -> "${params.longmappingsdir}/readBedToGff/" }
+    }
+    btp {
+        path { btp -> "${params.longmappingsdir}/reads2biotypes/" }
     }
 }
