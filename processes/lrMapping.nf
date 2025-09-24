@@ -13,7 +13,11 @@ process longReadMapping {
     """
     mkdir -p ${params.mappingsdir} ${params.longmappingsdir}
 
-    minimap_preset=\$( awk -v t=${tech} ' t ~ /ONT/ ' { print "splice" } else { print "splice:hq"} )
+    if [[ ${tech} == "ONT" ]] then 
+        minimap_preset="splice" 
+    else 
+        minimap_preset="splice:hq" 
+    fi
 
     echoerr "Mapping"
     minimap2 --MD -x \${minimap_preset} -t ${params.threads} --secondary=no -L -a ${params.genome} ${fastq} > "${file_name}.tmp.bam"
@@ -147,7 +151,8 @@ process getMappingStats {
     tuple val(file_name), path(bam), path(fastq)
 
     output:
-    tuple path("${file_name}.mapping.stats.tsv"), path("${file_name}.mapping.spikeIns.stats.tsv")
+    path "${file_name}.mapping.stats.tsv"
+    path "${file_name}.mapping.spikeIns.stats.tsv"
 
     script:
     """
@@ -177,6 +182,8 @@ process aggMappingStats {
 }
 
 process aggMappingStatspikeIns {
+    tag "Aggregate mapping Stat for Spike-Ins"
+
     input:
     path mapping_stats_spikeins
 
@@ -187,9 +194,11 @@ process aggMappingStatspikeIns {
     """
     echo -e "sampleName\\tcategory\\tcount\\tpercent" > all.spikeIns.mapping.stats.tsv
 
-    awk '{ print \$1"\\tSIRVs\\t"\$7"\\t"\$9"\\n"\$1"\\tERCCs\\t"\$6"\\t"\$8 }' ${mapping_stats_spikeins} \
+    for (mapping_spikein in ${mapping_stats_spikeins}) do
+        awk '{ print \$1"\\tSIRVs\\t"\$7"\\t"\$9"\\n"\$1"\\tERCCs\\t"\$6"\\t"\$8 }' \$mapping_spikein \
         | sort --parallel=${params.threads} -T ${params.TMPDIR} \
         >> all.spikeIns.mapping.stats.tsv
+    done
     """
 }
 
@@ -205,7 +214,9 @@ process plotMappingStats {
 
     script:
     """
-    plotMappingStats.R ${basic_stats} lrMapping.basic.stats
+    for (bstat in ${basic_stats}) do
+        plotMappingStats.R \$bstat lrMapping.basic.stats
+    done
     """
 }
 
@@ -221,7 +232,9 @@ process plotSpikeInsMappingStats {
 
     script:
     """
-    plotSpikeInsMappingStats.R ${spikeins_stats} lrMapping.spikeIns.stats
+    for (spstat in ${spikeins_stats}) do
+        plotSpikeInsMappingStats.R {spstat} lrMapping.spikeIns.stats
+    done
     """
 }
 
@@ -380,7 +393,7 @@ workflow lrMapping {
     plot_spikeins = plotSpikeInsMappingStats(allspikes)
 
     dupl = checkOnlyOneHit(mappings)
-    beds = readBamToBed(readBamToBed)
+    beds = readBamToBed(mappings)
 
     beds.map { bed_file ->
         def base = bed_file.baseName

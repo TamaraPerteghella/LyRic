@@ -20,8 +20,8 @@ workflow {
             .splitText()
             .filter { !it.startsWith("absolute_path") }
             .map { line ->
-                def (filePath, filename) = line.split('\t')[0..2]
-                tuple(filename, file(filePath))
+                def (filePath, filename, tech) = line.split('\t')[0..2]
+                tuple(filename, file(filePath), tech)
             }
     }
     else {
