@@ -23,13 +23,14 @@ workflow {
                 def (filePath, filename, tech) = line.split('\t')[0..2]
                 tuple(filename, file(filePath), tech)
             }
+        fastq_ch.view()
     }
     else {
         println("Expecting files in: ${params.datadir}/")
         fastq_ch = Channel.fromPath("${params.datadir}/*.fastq.gz")
             .map { file ->
                 def base = file.name.replaceAll(/\.fastq\.gz$/, '')
-                tuple(base, file)
+                tuple(base, file, "${params.tech}")
             }
     }
 

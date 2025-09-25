@@ -1,7 +1,7 @@
 process longReadMapping {
 
     tag { file_name }
-    conda "../envs/minimap2_env.yml"
+    conda "${projectDir}/workflow/envs/minimap2_env.yml"
 
     input:
     tuple val(file_name), path(fastq), val(tech)
@@ -37,7 +37,7 @@ process longReadMapping {
 process makeBigWigs {
 
     tag { file_name }
-    conda "../envs/xtools_env.yml"
+    conda "${projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -54,7 +54,7 @@ process makeBigWigs {
 process bamqc {
 
     tag { file_name }
-    conda "../envs/qualimap_env.yml"
+    conda "${projectDir}/workflow/envs/qualimap_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -87,7 +87,7 @@ process aggBamqcStats {
 
 process plotBamqcStats {
 
-    conda "../envs/R_env.yml"
+    conda "${projectDir}/workflow/envs/R_env.yml"
 
     input:
     path seq_error_stats
@@ -104,7 +104,7 @@ process plotBamqcStats {
 process makeBigWigExonicRegions {
 
     tag { file_name }
-    conda "../envs/xtools_env.yml"
+    conda "${projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -124,7 +124,7 @@ process makeBigWigExonicRegions {
 }
 
 process getReadProfileMatrix {
-    conda "../envs/xtools_env.yml"
+    conda "${projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     path exonic_bigwigs
@@ -145,7 +145,7 @@ process getReadProfileMatrix {
 
 process getMappingStats {
     tag { file_name }
-    conda "../envs/xtools_env.yml"
+    conda "${projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path(bam), path(fastq)
@@ -204,7 +204,7 @@ process aggMappingStatspikeIns {
 
 
 process plotMappingStats {
-    conda "../envs/R_env.yml"
+    conda "${projectDir}/workflow/envs/R_env.yml"
 
     input:
     path basic_stats
@@ -222,7 +222,7 @@ process plotMappingStats {
 
 process plotSpikeInsMappingStats {
 
-    conda "../envs/R_env.yml"
+    conda "${projectDir}/workflow/envs/R_env.yml"
 
     input:
     path spikeins_stats
@@ -240,7 +240,7 @@ process plotSpikeInsMappingStats {
 
 process checkOnlyOneHit {
     tag { file_name }
-    conda "../envs/xtools_env.yml"
+    conda "${projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -265,7 +265,7 @@ process checkOnlyOneHit {
 
 process readBamToBed {
     tag { file_name }
-    conda "../envs/xtools_env.yml"
+    conda "${projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -299,7 +299,7 @@ process readBedToGff {
 
 process getReadBiotypeClassification {
     tag { file_name }
-    conda "../envs/xtools_env.yml"
+    conda "${projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -346,7 +346,7 @@ process aggReadToBiotypeBreakdownStats {
 }
 
 process plotReadToBiotypeBreakdownStats {
-    conda "../envs/R_env.yml"
+    conda "${projectDir}/workflow/envs/R_env.yml"
 
     input:
     path stats_biotypes_out
