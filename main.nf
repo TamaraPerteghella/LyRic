@@ -93,39 +93,39 @@ workflow {
 
 output {
     qc {
-        path { fastqc -> "${params.qcdir}/" }
+        path { _fastqc -> "${params.qcdir}/" }
     }
     plots {
-        path { plt -> "${params.plotdir}/" }
+        path { _plt -> "${params.plotdir}/" }
     }
     stats {
-        path { stat -> "${params.statsdir}/" }
+        path { _stat -> "${params.statsdir}/" }
     }
     stats_tmp {
-        path { stat -> "${params.statsdir}/tmp/" }
+        path { _stat -> "${params.statsdir}/tmp/" }
     }
     long_reads_mappings {
-        path { lrm -> "${params.longmappingsdir}" }
+        path { _lrm -> "${params.longmappingsdir}" }
     }
     long_reads_bwig {
-        path { lrb -> "${params.longmappingsdir}/bigwigs/" }
+        path { _lrb -> "${params.longmappingsdir}/bigwigs/" }
     }
     long_reads_bamqc {
-        path { lrq -> "${params.longmappingsdir}/qc/bamqc/" }
+        path { _lrq -> "${params.longmappingsdir}/qc/bamqc/" }
     }
     long_reads_exonic_bwig {
-        path { lre -> "${params.longmappingsdir}/exonic_bigwigs/" }
+        path { _lre -> "${params.longmappingsdir}/exonic_bigwigs/" }
     }
     long_reads_qc {
-        path { lrq -> "${params.longmappingsdir}/qc/" }
+        path { _lrq -> "${params.longmappingsdir}/qc/" }
     }
     long_reads_bed {
-        path { lrb -> "${params.longmappingsdir}/readBamToBed/" }
+        path { _lrb -> "${params.longmappingsdir}/readBamToBed/" }
     }
     long_reads_gff {
-        path { lrg -> "${params.longmappingsdir}/readBedToGff/" }
+        path { _lrg -> "${params.longmappingsdir}/readBedToGff/" }
     }
     btp {
-        path { btp -> "${params.longmappingsdir}/reads2biotypes/" }
+        path { _btp -> "${params.longmappingsdir}/reads2biotypes/" }
     }
 }

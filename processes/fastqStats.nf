@@ -54,7 +54,7 @@ process fastqTimestamps {
 // get read lengths for all FASTQ files:
 process getReadLengthSummary {
     tag { file_name }
-    conda "${projectDir}/workflow/envs/R_env.yml"
+    conda "${workflow.projectDir}/workflow/envs/R_env.yml"
 
     input:
     tuple val(file_name), path(fastq), val(tech)
@@ -94,7 +94,7 @@ process aggReadLengthSummary {
 process plotReadLength {
 
     tag { file_name }
-    conda "${projectDir}/workflow/envs/R_env.yml"
+    conda "${workflow.projectDir}/workflow/envs/R_env.yml"
 
     input:
     tuple val(file_name), path(readlength_file)
