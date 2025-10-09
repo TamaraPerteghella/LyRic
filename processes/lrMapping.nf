@@ -1,7 +1,6 @@
 process longReadMapping {
 
     tag { file_name }
-    conda "${workflow.projectDir}/workflow/envs/minimap2_env.yml"
 
     input:
     tuple val(file_name), path(fastq), val(tech)
@@ -13,20 +12,20 @@ process longReadMapping {
     """
     mkdir -p ${params.mappingsdir} ${params.longmappingsdir}
 
-    if [[ ${tech} == "ONT" ]] then 
+    if [[ ${tech} == "ONT" ]]; then 
         minimap_preset="splice" 
     else 
         minimap_preset="splice:hq" 
     fi
 
     echoerr "Mapping"
-    minimap2 --MD -x \${minimap_preset} -t ${params.threads} --secondary=no -L -a ${params.genome} ${fastq} > "${file_name}.tmp.bam"
+    minimap2 --MD -x \${minimap_preset} -t ${task.cpus} --secondary=no -L -a ${params.genome} ${fastq} > "${file_name}.tmp.bam"
     echoerr "Mapping done"
 
     echoerr "Sorting BAM"
     samtools view -H "${file_name}.tmp.bam" > "${file_name}.sam"
-    samtools view -F 256 -F4 -F 2048 "${file_name}.bam" >> "${file_name}.sam"
-    cat "${file_name}.sam" | samtools sort -T ${params.TMPDIR}  --threads ${params.threads} -m 5G - > "${file_name}.bam" && rm "${file_name}.tmp.bam"
+    samtools view -F 256 -F4 -F 2048 "${file_name}.tmp.bam" >> "${file_name}.sam"
+    samtools sort -T ${params.TMPDIR} --threads ${params.threads} -m 5G "${file_name}.sam" > "${file_name}.bam" && rm "${file_name}.tmp.bam"
     echoerr "Done sorting BAM"
 
     samtools index "${file_name}.bam"
@@ -37,7 +36,6 @@ process longReadMapping {
 process makeBigWigs {
 
     tag { file_name }
-    conda "${workflow.projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -54,7 +52,6 @@ process makeBigWigs {
 process bamqc {
 
     tag { file_name }
-    conda "${workflow.projectDir}/workflow/envs/qualimap_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -66,8 +63,8 @@ process bamqc {
     """
     mkdir -p ${params.longmappingsdir}/qc/bamqc
     unset DISPLAY #for JAVA
-    qualimap bamqc -bam "${file_name}.bam" -outdir \${file_name}/ --java-mem-size=25G
-    qualimapReportToTsv.pl "${file_name}/genome_results.txt" | cut -f2,3 | grep -v globalErrorRate | sed 's/PerMappedBase//' | awk -v s=\${file_name}'{{print s"\\t"${file_name}"\\t"}}' > ".sequencingError.stats.tsv"
+    qualimap bamqc -bam "${file_name}.bam" -outdir ${file_name}/ --java-mem-size=25G
+    qualimapReportToTsv.pl "${file_name}/genome_results.txt" | cut -f2,3 | grep -v globalErrorRate | sed 's/PerMappedBase//' | awk -v s=${file_name} '{ print s"\\t"\$1"\\t"\$2} ' > "${file_name}.sequencingError.stats.tsv"
     """
 }
 
@@ -87,7 +84,7 @@ process aggBamqcStats {
 
 process plotBamqcStats {
 
-    conda "${workflow.projectDir}/workflow/envs/R_env.yml"
+
 
     input:
     path seq_error_stats
@@ -101,10 +98,10 @@ process plotBamqcStats {
     """
 }
 
-process makeBigWigExonicRegions {
 
+
+process makeBigWigExonicRegions {
     tag { file_name }
-    conda "${workflow.projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -115,29 +112,28 @@ process makeBigWigExonicRegions {
     script:
     """
     mkdir -p ${params.longmappingsdir}/exonic_bigwigs
-    cat ${params.annotation} | awk -F"\\t" ' ${params.TMPDIR} == "exon" ' > ${file_name}/exonic.gff
-    bedtools intersect -split -u -a ${params.TMPDIR}.bam -b ${file_name}/exonic.gff > ${file_name}.tmp.bam
+    awk -F"\\t" '\$3 == "exon" ' ${params.annotation} > ${file_name}.exonic.gff
+    bedtools intersect -split -u -a ${file_name}.bam -b ${file_name}.exonic.gff > ${file_name}.tmp.bam
     samtools index ${file_name}.tmp.bam
 
-    bamCoverage --normalizeUsing CPM  -b ${file_name}.tmp.bam -o .bw
+    bamCoverage --normalizeUsing CPM -b ${file_name}.tmp.bam -o ${file_name}.bw
     """
 }
 
 process getReadProfileMatrix {
-    conda "${workflow.projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     path exonic_bigwigs
 
     output:
-    path "readProfileMatrix.tsv.gz"
+    tuple path ("readProfileMatrix.tsv.gz"), path("readProfile.density.png"), path("readProfile.heatmap.png")
 
     script:
     """
-    bw=${params.threads}exonic_bigwigs[@])
+    bw=( ${exonic_bigwigs} )
     echo \${bw[@]} | tr " " "\\n" | cut -d"/" -f9 | cut -d"." -f1 | tr "\\n" " " > librarypreps.txt
 
-    computeMatrix scale-regions -S \${bw[@]} -R ${params.annotation_bed} -o readProfileMatrix.tsv.gz --upstream 1000 --downstream 1000 --sortRegions ascend --missingDataAsZero --skipZeros --metagene -p  --samplesLabel cat librarypreps.txt | perl -ne 'chomp; print')
+    computeMatrix scale-regions -S \${bw[@]} -R ${params.annotation} -o readProfileMatrix.tsv.gz --upstream 1000 --downstream 1000 --sortRegions ascend --missingDataAsZero --skipZeros --metagene -p ${params.threads} --samplesLabel \$(cat librarypreps.txt | perl -ne 'chomp; print')
     plotProfile -m readProfileMatrix.tsv.gz -o readProfile.density.png --perGroup --plotType se --yAxisLabel "mean CPM" --regionsLabel '' 
     plotHeatmap -m readProfileMatrix.tsv.gz -o readProfile.heatmap.png --perGroup --plotType se --yAxisLabel "mean CPM" --regionsLabel '' --whatToShow 'heatmap and colorbar'
     """
@@ -145,25 +141,23 @@ process getReadProfileMatrix {
 
 process getMappingStats {
     tag { file_name }
-    conda "${workflow.projectDir}/workflow/envs/xtools_env.yml"
 
     input:
-    tuple val(file_name), path(bam), path(fastq)
+    tuple val(file_name), path(fastq), path(bam)
 
     output:
-    path "${file_name}.mapping.stats.tsv"
-    path "${file_name}.mapping.spikeIns.stats.tsv"
+    tuple path("${file_name}.mapping.stats.tsv"), path("${file_name}.mapping.spikeIns.stats.tsv")
 
     script:
     """
-    totalReads=${fastq}zcat ${bam} | fastq2tsv.pl | wc -l)
-    mappedReads=${params.thread}samtools view -F 4 ${params.TMPDIR} | cut -f1 | sort --parallel=${file_name} -T ${bam} | uniq | wc -l)
+    totalReads=\$(zcat ${fastq} | fastq2tsv.pl | wc -l)
+    mappedReads=\$(samtools view -F 4 ${bam} | cut -f1 | sort --parallel=${params.threads} -T ${params.TMPDIR} | uniq | wc -l)
     
-    echo -e "\${file_name}\\t\$totalReads\\t\$mappedReads" | awk '{ print \$0"\\t"\$6/\$5 }' > ${bam}.mapping.stats.tsv" 
+    echo -e "${file_name}\\t\$totalReads\\t\$mappedReads" | awk '{ print \$0"\\t"\$3/\$2 }' > "${file_name}.mapping.stats.tsv"
     
-    erccMappedReads=${file_name}samtools view -F 4  | cut -f3 | tgrep ERCC | wc -l )
-    sirvMappedReads=samtools view -F 4  | cut -f3 | tgrep SIRV | wc -l )
-    echo -e "\${file_name}\\t\$totalReads\\t\$erccMappedReads\\t\$sirvMappedReads" | awk ' {print \$0"\\t"\$6/\$5"\\t"\$7/\$5 }' > .mapping.spikeIns.stats.tsv
+    erccMappedReads=\$(samtools view -F 4 ${bam} | cut -f3 | tgrep ERCC | wc -l )
+    sirvMappedReads=\$(samtools view -F 4 ${bam} | cut -f3 | tgrep SIRV | wc -l )
+    echo -e "${file_name}\\t\$totalReads\\t\$erccMappedReads\\t\$sirvMappedReads" | awk ' {print \$0"\\t"\$3/\$2"\\t"\$4/\$2 }' > "${file_name}.mapping.spikeIns.stats.tsv"
     """
 }
 
@@ -177,7 +171,7 @@ process aggMappingStats {
     script:
     """
     echo -e "sampleName\\ttotalReads\\tmappedReads\\tpercentMappedReads" > all.basic.mapping.stats.tsv   
-    cat ${mapping_stats} | sort --parallel=${params.threads} -T ${params.TMPDIR} >> all.basic.mapping.stats.tsv
+    sort --parallel=${params.threads} -T ${params.TMPDIR} ${mapping_stats} >> all.basic.mapping.stats.tsv
     """
 }
 
@@ -194,7 +188,7 @@ process aggMappingStatspikeIns {
     """
     echo -e "sampleName\\tcategory\\tcount\\tpercent" > all.spikeIns.mapping.stats.tsv
 
-    for (mapping_spikein in ${mapping_stats_spikeins}) do
+    for mapping_spikein in ${mapping_stats_spikeins}; do
         awk '{ print \$1"\\tSIRVs\\t"\$7"\\t"\$9"\\n"\$1"\\tERCCs\\t"\$6"\\t"\$8 }' \$mapping_spikein \
         | sort --parallel=${params.threads} -T ${params.TMPDIR} \
         >> all.spikeIns.mapping.stats.tsv
@@ -204,7 +198,7 @@ process aggMappingStatspikeIns {
 
 
 process plotMappingStats {
-    conda "${workflow.projectDir}/workflow/envs/R_env.yml"
+
 
     input:
     path basic_stats
@@ -214,7 +208,7 @@ process plotMappingStats {
 
     script:
     """
-    for (bstat in ${basic_stats}) do
+    for bstat in ${basic_stats}; do
         plotMappingStats.R \$bstat lrMapping.basic.stats
     done
     """
@@ -222,7 +216,7 @@ process plotMappingStats {
 
 process plotSpikeInsMappingStats {
 
-    conda "${workflow.projectDir}/workflow/envs/R_env.yml"
+
 
     input:
     path spikeins_stats
@@ -232,15 +226,14 @@ process plotSpikeInsMappingStats {
 
     script:
     """
-    for (spstat in ${spikeins_stats}) do
-        plotSpikeInsMappingStats.R {spstat} lrMapping.spikeIns.stats
+    for spstat in ${spikeins_stats}; do
+        plotSpikeInsMappingStats.R \${spstat} lrMapping.spikeIns.stats
     done
     """
 }
 
 process checkOnlyOneHit {
     tag { file_name }
-    conda "${workflow.projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -252,8 +245,8 @@ process checkOnlyOneHit {
     """
     mkdir -p ${params.longmappingsqcdir}
 
-    samtools view ${file_name}.bam | cut -f1 | sort -T ${params.TMPDIR} | uniq -dc > ${file_name}.bam.dupl.txt
-    count=${file_name}cat .bam.dupl.txt | wc -l )
+    samtools view ${file_name}.bam | cut -f1 | sort --parallel=${params.threads} -T ${params.TMPDIR} | uniq -dc > ${file_name}.bam.dupl.txt
+    count=\$(cat ${file_name}.bam.dupl.txt | wc -l )
 
     if [ \$count -gt 0 ]; then 
         echo "\$count duplicate read IDs found"
@@ -265,7 +258,6 @@ process checkOnlyOneHit {
 
 process readBamToBed {
     tag { file_name }
-    conda "${workflow.projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -299,7 +291,6 @@ process readBedToGff {
 
 process getReadBiotypeClassification {
     tag { file_name }
-    conda "${workflow.projectDir}/workflow/envs/xtools_env.yml"
 
     input:
     tuple val(file_name), path("${file_name}.bam")
@@ -326,8 +317,8 @@ process getReadToBiotypeBreakdownStats {
 
     script:
     """
-    totalPairs=${file_name}zcat {input} | wc -l)
-    zcat ${params.threads}.reads2biotypes.woSpikeIns.tsv.gz | cut -f2 | sort --parallel = ${params.TMPDIR} -T ${file_name} | uniq -c | ssv2tsv | awk -v s=${file_name} -v tp=\$totalPairs '{ print s"\\t"\$2"\\t"\$1"\\t"\$1/tp }' > .readToBiotypeBreakdown.woSpikeIns.stats.tsv
+    totalPairs=\$( zcat ${file_name}.reads2biotypes.woSpikeIns.tsv.gz | wc -l)
+    zcat ${file_name}.reads2biotypes.woSpikeIns.tsv.gz | cut -f2 | sort --parallel=${params.threads} -T ${params.TMPDIR} | uniq -c | ssv2tsv | awk -v s=${file_name} -v tp=\$totalPairs '{ print s"\\t"\$2"\\t"\$1"\\t"\$1/tp }' > ${file_name}.readToBiotypeBreakdown.woSpikeIns.stats.tsv
     """
 }
 
@@ -341,12 +332,12 @@ process aggReadToBiotypeBreakdownStats {
     script:
     """
     echo -e "sample_name\\tbiotype\\treadOverlapsCount\\treadOverlapsPercent" > all.readToBiotypeBreakdown.woSpikeIns.stats.tsv
-    cat ${stats_biotypes} | sort --parallel=${params.threads} -T ${params.TMPDIR} >> all.readToBiotypeBreakdown.woSpikeIns.stats.tsv
+    sort --parallel=${params.threads} -T ${params.TMPDIR} ${stats_biotypes} >> all.readToBiotypeBreakdown.woSpikeIns.stats.tsv
     """
 }
 
 process plotReadToBiotypeBreakdownStats {
-    conda "${workflow.projectDir}/workflow/envs/R_env.yml"
+
 
     input:
     path stats_biotypes_out
@@ -365,16 +356,17 @@ workflow lrMapping {
     fastq_ch
 
     main:
-    (mappings, indexes) = longReadMapping(fastq_ch)
+    mappings_output = longReadMapping(fastq_ch)
 
-    mappings.map { bam_file ->
-        def base = bam_file.baseName
-        tuple(base, bam_file)
+    indexes = mappings_output.map{ _bam, bai -> bai }
+    mappings = mappings_output.map{ bam, _bai -> bam }.map { bam_file ->
+        def file_name = bam_file.baseName
+        tuple(file_name, bam_file)
     }
 
     bigwigs = makeBigWigs(mappings)
     bamqc_ch = bamqc(mappings)
-    agg_stats = aggBamqcStats(bamqc_ch)
+    agg_stats = aggBamqcStats(bamqc_ch.map{ _gen, seq -> seq })
     plots = plotBamqcStats(agg_stats)
     exonic_bigwigs = makeBigWigExonicRegions(mappings)
     (matrix, density, heatmap) = getReadProfileMatrix(exonic_bigwigs)
@@ -385,30 +377,21 @@ workflow lrMapping {
         .join(mappings)
         .map { file_name, fastq, bam_file -> tuple(file_name, fastq, bam_file) }
 
-    (basic, spikeins) = getMappingStats(fq_bam_ch)
+    mappings_output = getMappingStats(fq_bam_ch)
 
-    allbasic = aggMappingStats(basic)
-    allspikes = aggMappingStatspikeIns(spikeins)
+    allbasic = aggMappingStats(mappings_output.map{ basic, _spikeins -> basic })
+    allspikes = aggMappingStatspikeIns(mappings_output.map{ _basic, spikeins -> spikeins })
     plot_stats = plotMappingStats(allbasic)
     plot_spikeins = plotSpikeInsMappingStats(allspikes)
 
     dupl = checkOnlyOneHit(mappings)
     beds = readBamToBed(mappings)
 
-    beds.map { bed_file ->
-        def base = bed_file.baseName
-        tuple(base, bed_file)
-    }
-
-    gffs = readBedToGff(beds)
+    gffs = readBedToGff(beds.map { bed_file -> def base = bed_file.baseName; tuple(base, bed_file) })
 
     biotype_class = getReadBiotypeClassification(mappings)
-    biotype_class.map { btp_file ->
-        def base = btp_file.baseName
-        tuple(base, btp_file)
-    }
 
-    biotype_stats = aggReadToBiotypeBreakdownStats(biotype_class)
+    biotype_stats = aggReadToBiotypeBreakdownStats(biotype_class.map { btp_file -> def base = btp_file.baseName; tuple(base, btp_file) })
     plot_biotype_stats = plotReadToBiotypeBreakdownStats(biotype_stats)
 
     emit:
