@@ -5,7 +5,7 @@ nextflow.preview.output = true
 // Import everything from helpers.nf
 include { fastqStats } from './processes/fastqStats.nf'
 include { lrMapping } from './processes/lrMapping.nf'
-
+include { srMapping } from './processes/srMapping.nf'
 
 // Define the main workflow
 workflow {
@@ -20,8 +20,8 @@ workflow {
             .splitText()
             .filter { !it.startsWith("absolute_path") }
             .map { line ->
-                def (filePath, filename, tech) = line.split('\t')[0..2]
-                tuple(filename, file(filePath), tech)
+                def (filePath, filename, genome, tech) = line.split('\t')[0..3]
+                tuple(filename, file(filePath), genome, tech)
             }
         fastq_ch.view()
     }
@@ -30,7 +30,7 @@ workflow {
         fastq_ch = Channel.fromPath("${params.datadir}/*.fastq.gz")
             .map { file ->
                 def base = file.name.replaceAll(/\.fastq\.gz$/, '')
-                tuple(base, file, "${params.tech}")
+                tuple(base, file, "${params.genome}", "${params.tech}")
             }
     }
 
@@ -49,7 +49,7 @@ workflow {
     }
 
     // Call the process or workflow from helpers.nf
-    fastqStats(fastq_ch)
+    fastqStats(fastq_ch.map{ file_name, fastq, _genome, _tech -> tuple(file_name, fastq) })
 
     statfiles = fastqStats.out.timestamp_fastq.concat(fastqStats.out.aggregate_summary)
     qcfiles = fastqStats.out.qc_ch
@@ -67,7 +67,6 @@ workflow {
     statfiles = statfiles.concat(lrMapping.out.agg_stats).concat(lrMapping.out.matrix).concat(lrMapping.out.allbasic).concat(lrMapping.out.allspikes)
     plotfiles = plotfiles.concat(lrMapping.out.plots).concat(lrMapping.out.density).concat(lrMapping.out.heatmap).concat(lrMapping.out.plot_stats).concat(lrMapping.out.plot_spikeins)
 
-
     exonic_bw = lrMapping.out.exonic_bigwigs
     lr_bed = lrMapping.out.beds
     lr_gffs = lrMapping.out.gffs
@@ -75,6 +74,8 @@ workflow {
     biotype_class = lrMapping.out.biotype_class
     statfiles = statfiles.concat(lrMapping.out.biotype_stats)
     plotfiles = plotfiles.concat(lrMapping.out.plot_biotype_stats)
+
+    srMapping(fastq_ch.map{ file_name, _fastq, genome, _tech -> tuple(file_name, genome) })
 
     publish:
     qc = qcfiles

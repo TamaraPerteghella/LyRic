@@ -1,9 +1,8 @@
 process longReadMapping {
-
     tag { file_name }
 
     input:
-    tuple val(file_name), path(fastq), val(tech)
+    tuple val(file_name), path(fastq), val(genome), val(tech)
 
     output:
     tuple path("${file_name}.bam"), path("${file_name}.bam.bai")
@@ -19,7 +18,7 @@ process longReadMapping {
     fi
 
     echoerr "Mapping"
-    minimap2 --MD -x \${minimap_preset} -t ${task.cpus} --secondary=no -L -a ${params.genome} ${fastq} > "${file_name}.tmp.bam"
+    minimap2 --MD -x \${minimap_preset} -t ${task.cpus} --secondary=no -L -a ${params.genomes_folder}/${genome}.fa.gz ${fastq} > "${file_name}.tmp.bam"
     echoerr "Mapping done"
 
     echoerr "Sorting BAM"
@@ -34,7 +33,6 @@ process longReadMapping {
 }
 
 process makeBigWigs {
-
     tag { file_name }
 
     input:
@@ -50,7 +48,6 @@ process makeBigWigs {
 }
 
 process bamqc {
-
     tag { file_name }
 
     input:
@@ -83,8 +80,7 @@ process aggBamqcStats {
 }
 
 process plotBamqcStats {
-
-
+    container "docker://tamaraperteghella/lyric_r4:latest"
 
     input:
     path seq_error_stats
@@ -121,7 +117,6 @@ process makeBigWigExonicRegions {
 }
 
 process getReadProfileMatrix {
-
     input:
     path exonic_bigwigs
 
@@ -198,7 +193,7 @@ process aggMappingStatspikeIns {
 
 
 process plotMappingStats {
-
+    container "docker://tamaraperteghella/lyric_r4:latest"
 
     input:
     path basic_stats
@@ -215,8 +210,7 @@ process plotMappingStats {
 }
 
 process plotSpikeInsMappingStats {
-
-
+    container "docker://tamaraperteghella/lyric_r4:latest"
 
     input:
     path spikeins_stats
@@ -337,8 +331,8 @@ process aggReadToBiotypeBreakdownStats {
 }
 
 process plotReadToBiotypeBreakdownStats {
-
-
+    container "docker://tamaraperteghella/lyric_r4:latest"
+    
     input:
     path stats_biotypes_out
 

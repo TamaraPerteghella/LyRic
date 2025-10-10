@@ -1,10 +1,11 @@
-# Use a minimal base image
+# Use a minimal Ubuntu base
 FROM ubuntu:22.04
 
-# Set noninteractive mode for apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
+# ------------------------------------------------------------------------------
+# 1. System dependencies
+# ------------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     bzip2 \
@@ -13,63 +14,65 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     unzip \
+    python3 \
+    python3-pip \
+    python3-venv \
+    python3-dev \
+    gfortran \
+    libblas-dev \
+    liblapack-dev \
+    libbz2-dev \
+    zlib1g-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Miniconda
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
-    bash miniconda.sh -b -p /opt/conda && \
-    rm miniconda.sh
-ENV PATH="/opt/conda/bin:$PATH"
+# ------------------------------------------------------------------------------
+# 2. Python virtual environment
+# ------------------------------------------------------------------------------
+RUN python3 -m venv /opt/bioinfo
+ENV PATH="/opt/bioinfo/bin:$PATH"
 
-# Accept Anaconda Terms of Service
-RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+# Upgrade pip and setuptools
+RUN pip install --upgrade pip setuptools wheel
 
-# Update conda and install mamba
-RUN conda update -n base -c defaults conda -y && \
-    conda install -n base -c conda-forge mamba -y
+# ------------------------------------------------------------------------------
+# 3. Python packages
+# ------------------------------------------------------------------------------
 
-# Create bioinformatics environment with Python, R, Bioconductor, and tools
-RUN mamba create -y -n bioinfo \
-    -c conda-forge -c bioconda -c defaults \
-    star=2.7.10a \
-    samtools=1.13 \
-    bedtools=2.30.0 \
-    gffcompare=0.11.2 \
-    minimap2=2.22 \
-    pbccs=6.0.0 \
-    lima=2.0.0 \
-    isoseq3=3.4.0 \
-    deeptools=3.5.1 \
-    pybigwig=0.3.18 \
-    bx-python=0.8.11 \
-    numpy=1.21.2 \
-    pandas=1.3.2 \
-    scipy=1.7.1 \
-    scikit-learn=0.24.2 \
-    joblib=1.0.1 \
-    threadpoolctl=2.2.0 \
-    r-base=4.3.1 \
-    r-devtools \
-    r-tidyverse \
-    r-ggplot2 \
-    bioconductor-deseq2 \
-    bioconductor-edger \
-    bioconductor-limma \
-    bioconductor-genomicfeatures \
-    bioconductor-genomicranges \
-    bioconductor-rtracklayer \
-    bioconductor-tximport \
-    && conda clean -afy
+RUN pip install \
+    numpy==1.23.5 \
+    pandas==1.5.3 \
+    scipy==1.10.1 \
+    scikit-learn==1.2.2 \
+    joblib==1.3.2 \
+    threadpoolctl==3.1.0 \
+    pybigwig==0.3.18 \
+    git+https://github.com/bxlab/bx-python.git \
+    deeptools==3.5.1
 
-# Install Python cupcake library via pip inside the bioinfo environment
-RUN /opt/conda/envs/bioinfo/bin/pip install cDNA_Cupcake
+# ------------------------------------------------------------------------------
+# 4. Command-line bioinformatics tools
+# ------------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    samtools \
+    bedtools \
+    && rm -rf /var/lib/apt/lists/*
 
-# Activate environment by default
-SHELL ["conda", "run", "-n", "bioinfo", "/bin/bash", "-c"]
+# STAR
+RUN wget https://github.com/alexdobin/STAR/archive/2.7.10a.tar.gz -O /tmp/star.tar.gz && \
+    tar -xzf /tmp/star.tar.gz -C /tmp && \
+    cd /tmp/STAR-2.7.10a/source && make STAR && \
+    mv STAR /usr/local/bin/ && rm -rf /tmp/STAR-2.7.10a /tmp/star.tar.gz
 
-# Set working directory
+# minimap2
+RUN wget https://github.com/lh3/minimap2/releases/download/v2.22/minimap2-2.22_x64-linux.tar.bz2 -O /tmp/minimap2.tar.bz2 && \
+    tar -xjf /tmp/minimap2.tar.bz2 -C /usr/local/bin/ && \
+    rm -rf /tmp/minimap2.tar.bz2
+
+# ------------------------------------------------------------------------------
+# 5. Working directory and entrypoint
+# ------------------------------------------------------------------------------
 WORKDIR /data
-
-# Default command
 CMD ["bash"]

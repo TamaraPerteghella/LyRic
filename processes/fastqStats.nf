@@ -1,10 +1,9 @@
 // Check for duplicate IDs in fastq
 process basicFASTQqc {
-
     tag { file_name }
 
     input:
-    tuple val(file_name), path(fastq), val(tech)
+    tuple val(file_name), path(fastq)
 
     output:
     path "${file_name}.dupl.txt"
@@ -28,7 +27,6 @@ process basicFASTQqc {
 
 // Generate timestamps TSV
 process fastqTimestamps {
-
     tag "Collect FASTQ modification timestamps"
 
     input:
@@ -53,10 +51,12 @@ process fastqTimestamps {
 
 // get read lengths for all FASTQ files:
 process getReadLengthSummary {
+    container "docker://tamaraperteghella/lyric_r4:latest"
+
     tag { file_name }
 
     input:
-    tuple val(file_name), path(fastq), val(tech)
+    tuple val(file_name), path(fastq)
 
     output:
     tuple val(file_name), path("${file_name}.readlength.tsv.gz")
@@ -91,9 +91,9 @@ process aggReadLengthSummary {
 
 // plot histograms with R:
 process plotReadLength {
-
+    container "docker://tamaraperteghella/lyric_r4:latest"
+    
     tag { file_name }
-
 
     input:
     tuple val(file_name), path(readlength_file)
