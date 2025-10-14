@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 library(ggplot2)
 library(cowplot)
 library(plyr)

@@ -84,7 +84,7 @@ process makeHtmlSummaryDashboardIndex {
 
     script:
     """
-    mkdir -p output/html
+    #mkdir -p output/html
     printf '<!DOCTYPE html>\\n' > output/html/index.html
     printf "<html>\\n<head><title>Summary statistics tables for ${prj} project</title></head><body>\\n" >> output/html/index.html
     printf "<h1>Summary statistics tables for ${prj} project</h1>\\n<ul>\\n" >> output/html/index.html

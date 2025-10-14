@@ -9,8 +9,8 @@ process makeStarIndex{
     
     script:
     """
-    mkdir -p "${params.genomes_folder}/STARshort_indices/${params.genome}/SA/"
-    mkdir SA/
+    #mkdir -p "${params.genomes_folder}/STARshort_indices/${params.genome}/SA/"
+    #mkdir SA/
     STAR --runMode genomeGenerate --runThreadN 3 --genomeDir "SA/" --genomeFastaFiles "${params.genomes_folder}/${params.genome}.fa.gz"
     """
 }
@@ -25,7 +25,7 @@ process hiSeqReadMapping{
     
     script:
     """
-    mkdir -p "${params.mappingsdir}/shortReadMappings/" "${params.mappingsdir}/STAR/${file_name}"
+    #mkdir -p "${params.mappingsdir}/shortReadMappings/" "${params.mappingsdir}/STAR/${file_name}"
     
     echoerr "Mapping"
 

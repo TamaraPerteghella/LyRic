@@ -1,7 +1,7 @@
 #!/bin/bash -i
 
 # remove cluster logs from previous runs so they don't accumulate:
-\mv LyRic/qsub_logs LyRic/qsub_logs_bkp; mkdir LyRic/qsub_logs; rm -rf LyRic/qsub_logs_bkp/ &
+\mv LyRic/qsub_logs LyRic/qsub_logs_bkp; #mkdir LyRic/qsub_logs; rm -rf LyRic/qsub_logs_bkp/ &
 
 # activate snakemake conda environment: 
 conda activate snakemake; 

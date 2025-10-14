@@ -8,8 +8,8 @@ rule makeStarIndex:
     shell:
         """
 uuid=$(uuidgen)
-mkdir -p {TMPDIR}/$uuid ;
-mkdir -p $(dirname {output});
+#mkdir -p {TMPDIR}/$uuid ;
+#mkdir -p $(dirname {output});
 STAR --runMode genomeGenerate --runThreadN 3 --genomeDir {TMPDIR}/$uuid --genomeFastaFiles {input}
 mv -f {TMPDIR}/$uuid/* $(dirname {output})
         """
@@ -33,7 +33,7 @@ rule hiSeqReadMapping:
 uuidTmpOut=$(uuidgen)
 
 echoerr "Mapping"
-mkdir -p output/mappings/STAR/`basename {output}`/
+#mkdir -p output/mappings/STAR/`basename {output}`/
 STAR \
 --runThreadN {threads} \
 --readFilesIn {input.reads1} {input.reads2} \

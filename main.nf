@@ -32,8 +32,8 @@ workflow {
                 def base = file.name.replaceAll(/\.fastq\.gz$/, '')
                 tuple(base, file, "${params.genome}", "${params.tech}")
             }
+        fastq_ch.view()
     }
-
 
     workflow.onComplete {
         println("LyRic workflow finished smoothly.")
@@ -57,8 +57,7 @@ workflow {
     tmpstatsfile = fastqStats.out.readlength_ch.map { t -> t[1] }.concat(fastqStats.out.readlength_summary_ch)
 
     lrMapping(fastq_ch)
-
-    long_reads = lrMapping.out.mappings.concat(lrMapping.out.indexes)
+    long_reads = lrMapping.out.mappings
     bwigs = lrMapping.out.bigwigs
 
     lr_bamqc = lrMapping.out.bamqc_ch

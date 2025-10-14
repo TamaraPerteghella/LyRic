@@ -10,8 +10,6 @@ process basicFASTQqc {
 
     script:
     """
-    mkdir -p ${params.qcdir}
-
     # check that there are no read ID duplicates
     zcat ${fastq} | fastq2tsv.pl | awk '{print \$1}' | sort --parallel=${params.threads} -T ${params.TMPDIR} | uniq -dc > ${file_name}.dupl.txt
 
@@ -37,7 +35,6 @@ process fastqTimestamps {
 
     script:
     """
-    mkdir -p ${params.statsdir}
     echo -e "sample_name\tFASTQ_modified" > all.fastq.timestamps.tsv
 
     for t in ${dupl_files}; do
@@ -51,8 +48,7 @@ process fastqTimestamps {
 
 // get read lengths for all FASTQ files:
 process getReadLengthSummary {
-    container "docker://tamaraperteghella/lyric_r4:latest"
-
+    label 'rplots'
     tag { file_name }
 
     input:
@@ -91,8 +87,7 @@ process aggReadLengthSummary {
 
 // plot histograms with R:
 process plotReadLength {
-    container "docker://tamaraperteghella/lyric_r4:latest"
-    
+    label 'rplots'
     tag { file_name }
 
     input:
@@ -103,7 +98,6 @@ process plotReadLength {
 
     script:
     """
-    mkdir -p ${params.plotdir}
     plotReadLength.R ${readlength_file} ${file_name}_readLength.stats.pdf
     """
 }
@@ -115,10 +109,10 @@ workflow fastqStats {
 
     main:
     qc_ch = basicFASTQqc(fastq_ch)
-    timestamp_fastq = fastqTimestamps(qc_ch)
+    timestamp_fastq = fastqTimestamps(qc_ch.collect())
 
     (readlength_ch, readlength_summary_ch) = getReadLengthSummary(fastq_ch)
-    aggregate_summary = aggReadLengthSummary(readlength_summary_ch)
+    aggregate_summary = aggReadLengthSummary(readlength_summary_ch.collect())
 
     read_length_plot = plotReadLength(readlength_ch)
 

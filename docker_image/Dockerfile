@@ -50,6 +50,7 @@ RUN pip install \
     threadpoolctl==3.1.0 \
     pybigwig==0.3.18 \
     git+https://github.com/bxlab/bx-python.git \
+    matplotlib==3.8 \
     deeptools==3.5.1
 
 # ------------------------------------------------------------------------------
@@ -68,8 +69,20 @@ RUN wget https://github.com/alexdobin/STAR/archive/2.7.10a.tar.gz -O /tmp/star.t
 
 # minimap2
 RUN wget https://github.com/lh3/minimap2/releases/download/v2.22/minimap2-2.22_x64-linux.tar.bz2 -O /tmp/minimap2.tar.bz2 && \
-    tar -xjf /tmp/minimap2.tar.bz2 -C /usr/local/bin/ && \
-    rm -rf /tmp/minimap2.tar.bz2
+    tar -xjf /tmp/minimap2.tar.bz2 -C /tmp/ && mv /tmp/minimap2-2.22_x64-linux/minimap2 /usr/local/bin/ && \
+    chmod +x /usr/local/bin/minimap2 && rm -rf /tmp/minimap2.tar.bz2 /tmp/minimap2-2.22_x64-linux
+
+# Install Java runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-jre \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Qualimap
+RUN wget https://bitbucket.org/kokonech/qualimap/downloads/qualimap_v2.3.zip -O /tmp/qualimap.zip && \
+    unzip /tmp/qualimap.zip -d /opt/bioinfo/ && \
+    chmod +x /opt/bioinfo/qualimap_v2.3/qualimap && \
+    ln -s /opt/bioinfo/qualimap_v2.3/qualimap /usr/local/bin/qualimap && \
+    rm -rf /tmp/qualimap.zip
 
 # ------------------------------------------------------------------------------
 # 5. Working directory and entrypoint

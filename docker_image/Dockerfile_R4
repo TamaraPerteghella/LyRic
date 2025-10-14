@@ -54,6 +54,8 @@ RUN R -e "install.packages(c('tidyverse','ggplot2','devtools'), repos='https://c
 RUN R -e "install.packages('BiocManager', repos='https://cloud.r-project.org/')" && \
     R -e "BiocManager::install(c('DESeq2','edgeR','limma','GenomicFeatures','GenomicRanges','rtracklayer','tximport'), ask=FALSE, update=FALSE)"
 
+RUN R -e "install.packages(c('R.utils'), dependencies=TRUE)"
+
 # Set working directory
 WORKDIR /data
 

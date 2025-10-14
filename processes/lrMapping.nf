@@ -9,8 +9,6 @@ process longReadMapping {
 
     script:
     """
-    mkdir -p ${params.mappingsdir} ${params.longmappingsdir}
-
     if [[ ${tech} == "ONT" ]]; then 
         minimap_preset="splice" 
     else 
@@ -24,7 +22,7 @@ process longReadMapping {
     echoerr "Sorting BAM"
     samtools view -H "${file_name}.tmp.bam" > "${file_name}.sam"
     samtools view -F 256 -F4 -F 2048 "${file_name}.tmp.bam" >> "${file_name}.sam"
-    samtools sort -T ${params.TMPDIR} --threads ${params.threads} -m 5G "${file_name}.sam" > "${file_name}.bam" && rm "${file_name}.tmp.bam"
+    samtools sort -T ${params.TMPDIR} --threads ${params.threads} -m 2G "${file_name}.sam" > "${file_name}.bam" && rm "${file_name}.tmp.bam"
     echoerr "Done sorting BAM"
 
     samtools index "${file_name}.bam"
@@ -36,14 +34,14 @@ process makeBigWigs {
     tag { file_name }
 
     input:
-    tuple val(file_name), path("${file_name}.bam")
+    tuple val(file_name), path(bam_file), path(bai_file)
 
     output:
     path "${file_name}.bw"
 
     script:
     """
-    bamCoverage --normalizeUsing CPM -b "${file_name}.bam" -o "${file_name}.bw"
+    bamCoverage --normalizeUsing CPM -b ${bam_file} -o "${file_name}.bw"
     """
 }
 
@@ -51,16 +49,15 @@ process bamqc {
     tag { file_name }
 
     input:
-    tuple val(file_name), path("${file_name}.bam")
+    tuple val(file_name), path(bam_file), path(bai_file)
 
     output:
     tuple path("${file_name}/genome_results.txt"), path("${file_name}.sequencingError.stats.tsv")
 
     script:
     """
-    mkdir -p ${params.longmappingsdir}/qc/bamqc
     unset DISPLAY #for JAVA
-    qualimap bamqc -bam "${file_name}.bam" -outdir ${file_name}/ --java-mem-size=25G
+    qualimap bamqc -bam ${bam_file} -outdir ${file_name}/ --java-mem-size=25G
     qualimapReportToTsv.pl "${file_name}/genome_results.txt" | cut -f2,3 | grep -v globalErrorRate | sed 's/PerMappedBase//' | awk -v s=${file_name} '{ print s"\\t"\$1"\\t"\$2} ' > "${file_name}.sequencingError.stats.tsv"
     """
 }
@@ -80,7 +77,7 @@ process aggBamqcStats {
 }
 
 process plotBamqcStats {
-    container "docker://tamaraperteghella/lyric_r4:latest"
+    label 'rplots'
 
     input:
     path seq_error_stats
@@ -100,16 +97,15 @@ process makeBigWigExonicRegions {
     tag { file_name }
 
     input:
-    tuple val(file_name), path("${file_name}.bam")
+    tuple val(file_name), path(bam_file), path(bai_file)
 
     output:
     path "${file_name}.bw"
 
     script:
     """
-    mkdir -p ${params.longmappingsdir}/exonic_bigwigs
     awk -F"\\t" '\$3 == "exon" ' ${params.annotation} > ${file_name}.exonic.gff
-    bedtools intersect -split -u -a ${file_name}.bam -b ${file_name}.exonic.gff > ${file_name}.tmp.bam
+    bedtools intersect -split -u -a ${bam_file} -b ${file_name}.exonic.gff > ${file_name}.tmp.bam
     samtools index ${file_name}.tmp.bam
 
     bamCoverage --normalizeUsing CPM -b ${file_name}.tmp.bam -o ${file_name}.bw
@@ -165,8 +161,8 @@ process aggMappingStats {
 
     script:
     """
-    echo -e "sampleName\\ttotalReads\\tmappedReads\\tpercentMappedReads" > all.basic.mapping.stats.tsv   
-    sort --parallel=${params.threads} -T ${params.TMPDIR} ${mapping_stats} >> all.basic.mapping.stats.tsv
+    echo -e "sample_name\\ttotalReads\\tmappedReads\\tpercentMappedReads" > all.basic.mapping.stats.tsv   
+    cat ${mapping_stats} | sort --parallel=${params.threads} -T ${params.TMPDIR} >> all.basic.mapping.stats.tsv
     """
 }
 
@@ -181,19 +177,16 @@ process aggMappingStatspikeIns {
 
     script:
     """
-    echo -e "sampleName\\tcategory\\tcount\\tpercent" > all.spikeIns.mapping.stats.tsv
+    echo -e "sample_name\\tcategory\\tcount\\tpercent" > all.spikeIns.mapping.stats.tsv
 
-    for mapping_spikein in ${mapping_stats_spikeins}; do
-        awk '{ print \$1"\\tSIRVs\\t"\$7"\\t"\$9"\\n"\$1"\\tERCCs\\t"\$6"\\t"\$8 }' \$mapping_spikein \
-        | sort --parallel=${params.threads} -T ${params.TMPDIR} \
-        >> all.spikeIns.mapping.stats.tsv
-    done
+    awk '{ print \$1"\\tSIRVs\\t"\$7"\\t"\$9"\\n"\$1"\\tERCCs\\t"\$6"\\t"\$8 }' ${mapping_stats_spikeins} \
+        | sort --parallel=${params.threads} -T ${params.TMPDIR} >> all.spikeIns.mapping.stats.tsv
     """
 }
 
 
 process plotMappingStats {
-    container "docker://tamaraperteghella/lyric_r4:latest"
+    label 'rplots'
 
     input:
     path basic_stats
@@ -203,14 +196,12 @@ process plotMappingStats {
 
     script:
     """
-    for bstat in ${basic_stats}; do
-        plotMappingStats.R \$bstat lrMapping.basic.stats
-    done
+    plotMappingStats.R ${basic_stats} lrMapping.basic.stats
     """
 }
 
 process plotSpikeInsMappingStats {
-    container "docker://tamaraperteghella/lyric_r4:latest"
+    label 'rplots'
 
     input:
     path spikeins_stats
@@ -220,9 +211,7 @@ process plotSpikeInsMappingStats {
 
     script:
     """
-    for spstat in ${spikeins_stats}; do
-        plotSpikeInsMappingStats.R \${spstat} lrMapping.spikeIns.stats
-    done
+    plotSpikeInsMappingStats.R ${spikeins_stats} lrMapping.spikeIns.stats
     """
 }
 
@@ -230,16 +219,14 @@ process checkOnlyOneHit {
     tag { file_name }
 
     input:
-    tuple val(file_name), path("${file_name}.bam")
+    tuple val(file_name), path(bam_file), path(bai_file)
 
     output:
     path "${file_name}.bam.dupl.txt"
 
     script:
     """
-    mkdir -p ${params.longmappingsqcdir}
-
-    samtools view ${file_name}.bam | cut -f1 | sort --parallel=${params.threads} -T ${params.TMPDIR} | uniq -dc > ${file_name}.bam.dupl.txt
+    samtools view ${bam_file} | cut -f1 | sort --parallel=${params.threads} -T ${params.TMPDIR} | uniq -dc > ${file_name}.bam.dupl.txt
     count=\$(cat ${file_name}.bam.dupl.txt | wc -l )
 
     if [ \$count -gt 0 ]; then 
@@ -254,15 +241,14 @@ process readBamToBed {
     tag { file_name }
 
     input:
-    tuple val(file_name), path("${file_name}.bam")
+    tuple val(file_name), path(bam_file), path(bai_file)
 
     output:
     path "${file_name}.bed.gz"
 
     script:
     """
-    mkdir -p ${params.longmappingsdir}/readBamToBed
-    bedtools bamtobed -i ${file_name}.bam -bed12 \
+    bedtools bamtobed -i ${bam_file} -bed12 \
       | perl -ne '\$line=\$_; @line=split("\\t", \$line); @blockSizes=split(",", \$line[10]); \$allExonsOK=1; foreach \$block (@blockSizes){ if (\$block<2){ \$allExonsOK=0; last; } }; if (\$allExonsOK==1){ print \$line }' \
       | sort --parallel=${params.threads} -T ${params.TMPDIR} -k1,1 -k2,2n -k3,3n \
       | gzip > ${file_name}.bed.gz
@@ -278,7 +264,6 @@ process readBedToGff {
 
     script:
     """
-    mkdir -p ${params.longmappingsdir}/readBedToGff
     zcat "${file_name}.bed.gz" | bed12togff | sort --parallel=${params.threads} -T ${params.TMPDIR} -k1,1 -k4,4n -k5,5n | gzip > "${file_name}.gff.gz"
     """
 }
@@ -287,15 +272,14 @@ process getReadBiotypeClassification {
     tag { file_name }
 
     input:
-    tuple val(file_name), path("${file_name}.bam")
+    tuple val(file_name), path(bam_file), path(bai_file)
 
     output:
     path "${file_name}.reads2biotypes.woSpikeIns.tsv.gz"
 
     script:
     """
-    mkdir -p ${params.longmappingsdir}/reads2biotypes
-    bedtools bamtobed -i ${file_name}.bam -bed12 \
+    bedtools bamtobed -i ${bam_file} -bed12 \
       | bedtools intersect -split -wao -bed -a - -b ${params.annotation} | grep -v '^ERCC' | grep -v '^SIRV' \
       | perl -lane '\$gid="NA"; \$gt="nonExonic"; if(/gene_id "(\\S+)";/){\$gid=\$1} if(/gene_type "(\\S+)";/){\$gt=\$1} print "\$F[3]\\t\$gid\\t\$gt\\t\$F[-1]"' \
       | cut -f1,3 | sort --parallel=${params.threads} -T ${params.TMPDIR} | uniq | gzip > ${file_name}.reads2biotypes.woSpikeIns.tsv.gz
@@ -326,12 +310,12 @@ process aggReadToBiotypeBreakdownStats {
     script:
     """
     echo -e "sample_name\\tbiotype\\treadOverlapsCount\\treadOverlapsPercent" > all.readToBiotypeBreakdown.woSpikeIns.stats.tsv
-    sort --parallel=${params.threads} -T ${params.TMPDIR} ${stats_biotypes} >> all.readToBiotypeBreakdown.woSpikeIns.stats.tsv
+    cat ${stats_biotypes} | sort --parallel=${params.threads} -T ${params.TMPDIR} >> all.readToBiotypeBreakdown.woSpikeIns.stats.tsv
     """
 }
 
 process plotReadToBiotypeBreakdownStats {
-    container "docker://tamaraperteghella/lyric_r4:latest"
+    label 'rplots'
     
     input:
     path stats_biotypes_out
@@ -352,29 +336,28 @@ workflow lrMapping {
     main:
     mappings_output = longReadMapping(fastq_ch)
 
-    indexes = mappings_output.map{ _bam, bai -> bai }
-    mappings = mappings_output.map{ bam, _bai -> bam }.map { bam_file ->
-        def file_name = bam_file.baseName
-        tuple(file_name, bam_file)
+    mappings = mappings_output.map { bam, bai ->
+        def file_name = bam.baseName
+        tuple(file_name, bam, bai)
     }
 
     bigwigs = makeBigWigs(mappings)
     bamqc_ch = bamqc(mappings)
-    agg_stats = aggBamqcStats(bamqc_ch.map{ _gen, seq -> seq })
+    agg_stats = aggBamqcStats(bamqc_ch.map{ _gen, seq -> seq }.collect())
     plots = plotBamqcStats(agg_stats)
     exonic_bigwigs = makeBigWigExonicRegions(mappings)
-    (matrix, density, heatmap) = getReadProfileMatrix(exonic_bigwigs)
+    (matrix, density, heatmap) = getReadProfileMatrix(exonic_bigwigs.collect())
 
 
     fq_bam_ch = fastq_ch
-        .map { file_name, fastq, _tech -> tuple(file_name, fastq) }
+        .map { file_name, fastq, _genome, _tech -> tuple(file_name, fastq) }
         .join(mappings)
-        .map { file_name, fastq, bam_file -> tuple(file_name, fastq, bam_file) }
+        .map { file_name, fastq, bam_file, _bai_file -> tuple(file_name, fastq, bam_file) }
 
-    mappings_output = getMappingStats(fq_bam_ch)
+    mappings_stats = getMappingStats(fq_bam_ch)
 
-    allbasic = aggMappingStats(mappings_output.map{ basic, _spikeins -> basic })
-    allspikes = aggMappingStatspikeIns(mappings_output.map{ _basic, spikeins -> spikeins })
+    allbasic = aggMappingStats(mappings_stats.map{ basic, _spikeins -> basic }.collect())
+    allspikes = aggMappingStatspikeIns(mappings_stats.map{ _basic, spikeins -> spikeins }.collect())
     plot_stats = plotMappingStats(allbasic)
     plot_spikeins = plotSpikeInsMappingStats(allspikes)
 
@@ -385,12 +368,11 @@ workflow lrMapping {
 
     biotype_class = getReadBiotypeClassification(mappings)
 
-    biotype_stats = aggReadToBiotypeBreakdownStats(biotype_class.map { btp_file -> def base = btp_file.baseName; tuple(base, btp_file) })
+    biotype_stats = aggReadToBiotypeBreakdownStats(biotype_class.collect())
     plot_biotype_stats = plotReadToBiotypeBreakdownStats(biotype_stats)
 
     emit:
     mappings
-    indexes
     bigwigs
     bamqc_ch
     agg_stats
