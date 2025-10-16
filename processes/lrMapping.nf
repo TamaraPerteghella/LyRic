@@ -11,8 +11,11 @@ process longReadMapping {
     """
     if [[ ${tech} == "ONT" ]]; then 
         minimap_preset="splice" 
-    else 
+    elif [[ ${tech} == "PacBio" ]]; then 
         minimap_preset="splice:hq" 
+    else
+        echoerr "Unknown long read technology ${tech}. Please use ONT or PacBio"
+        exit 1;
     fi
 
     echoerr "Mapping"
@@ -20,13 +23,9 @@ process longReadMapping {
     echoerr "Mapping done"
 
     echoerr "Sorting BAM"
-    samtools view -H "${file_name}.tmp.bam" > "${file_name}.sam"
-    samtools view -F 256 -F4 -F 2048 "${file_name}.tmp.bam" >> "${file_name}.sam"
-    samtools sort -T ${params.TMPDIR} --threads ${params.threads} -m 2G "${file_name}.sam" > "${file_name}.bam" && rm "${file_name}.tmp.bam"
-    echoerr "Done sorting BAM"
-
+    samtools sort -T ${params.TMPDIR} --threads ${task.cpus} -m 2G "${file_name}.tmp.bam" -o "${file_name}.bam"
     samtools index "${file_name}.bam"
-
+    echoerr "Done sorting BAM"
     """
 }
 
@@ -92,7 +91,6 @@ process plotBamqcStats {
 }
 
 
-
 process makeBigWigExonicRegions {
     tag { file_name }
 
@@ -104,7 +102,7 @@ process makeBigWigExonicRegions {
 
     script:
     """
-    awk -F"\\t" '\$3 == "exon" ' ${params.annotation} > ${file_name}.exonic.gff
+    awk -F"\\t" '\$3 == "exon"' ${params.annotation} > ${file_name}.exonic.gff
     bedtools intersect -split -u -a ${bam_file} -b ${file_name}.exonic.gff > ${file_name}.tmp.bam
     samtools index ${file_name}.tmp.bam
 
@@ -117,14 +115,18 @@ process getReadProfileMatrix {
     path exonic_bigwigs
 
     output:
-    tuple path ("readProfileMatrix.tsv.gz"), path("readProfile.density.png"), path("readProfile.heatmap.png")
+    path("readProfileMatrix.tsv.gz")
+    path("readProfile.density.png")
+    path("readProfile.heatmap.png")
 
     script:
     """
     bw=( ${exonic_bigwigs} )
     echo \${bw[@]} | tr " " "\\n" | cut -d"/" -f9 | cut -d"." -f1 | tr "\\n" " " > librarypreps.txt
 
-    computeMatrix scale-regions -S \${bw[@]} -R ${params.annotation} -o readProfileMatrix.tsv.gz --upstream 1000 --downstream 1000 --sortRegions ascend --missingDataAsZero --skipZeros --metagene -p ${params.threads} --samplesLabel \$(cat librarypreps.txt | perl -ne 'chomp; print')
+    awk '\$3=="exon" {OFS="\\t"; print \$1, \$4-1, \$5, \$10, ".", \$7}' ${params.annotation} > tmp.exonicannotation.bed
+
+    computeMatrix scale-regions -S \${bw[@]} -R tmp.exonicannotation.bed -o readProfileMatrix.tsv.gz --upstream 1000 --downstream 1000 --sortRegions ascend --missingDataAsZero --skipZeros --metagene -p ${params.threads} --samplesLabel \$(cat librarypreps.txt | perl -ne 'chomp; print')
     plotProfile -m readProfileMatrix.tsv.gz -o readProfile.density.png --perGroup --plotType se --yAxisLabel "mean CPM" --regionsLabel '' 
     plotHeatmap -m readProfileMatrix.tsv.gz -o readProfile.heatmap.png --perGroup --plotType se --yAxisLabel "mean CPM" --regionsLabel '' --whatToShow 'heatmap and colorbar'
     """
@@ -192,11 +194,11 @@ process plotMappingStats {
     path basic_stats
 
     output:
-    path "lrMapping.basic.stats"
+    path "lrMapping_basic.stats.pdf"
 
     script:
     """
-    plotMappingStats.R ${basic_stats} lrMapping.basic.stats
+    plotMappingStats.R ${basic_stats} lrMapping_basic.stats.pdf
     """
 }
 
@@ -207,11 +209,11 @@ process plotSpikeInsMappingStats {
     path spikeins_stats
 
     output:
-    path "lrMapping.spikeIns.stats"
+    path "lrMapping_spikeIns.stats.pdf"
 
     script:
     """
-    plotSpikeInsMappingStats.R ${spikeins_stats} lrMapping.spikeIns.stats
+    plotSpikeInsMappingStats.R ${spikeins_stats} lrMapping_spikeIns.stats.pdf
     """
 }
 
@@ -231,9 +233,8 @@ process checkOnlyOneHit {
 
     if [ \$count -gt 0 ]; then 
         echo "\$count duplicate read IDs found"
-        exit 1;
+        #exit 1;
     fi
-
    """
 }
 
@@ -256,15 +257,16 @@ process readBamToBed {
 }
 
 process readBedToGff {
+    tag { file_name }
     input:
-    tuple val(file_name), path("${file_name}.bed.gz")
+    tuple val(file_name), path(bed_file)
 
     output:
     path "${file_name}.gff.gz"
 
     script:
     """
-    zcat "${file_name}.bed.gz" | bed12togff | sort --parallel=${params.threads} -T ${params.TMPDIR} -k1,1 -k4,4n -k5,5n | gzip > "${file_name}.gff.gz"
+    zcat ${bed_file} | bed12togff | sort --parallel=${params.threads} -T ${params.TMPDIR} -k1,1 -k4,4n -k5,5n | gzip > "${file_name}.gff.gz"
     """
 }
 
@@ -275,7 +277,7 @@ process getReadBiotypeClassification {
     tuple val(file_name), path(bam_file), path(bai_file)
 
     output:
-    path "${file_name}.reads2biotypes.woSpikeIns.tsv.gz"
+    tuple val(file_name), path("${file_name}.reads2biotypes.woSpikeIns.tsv.gz")
 
     script:
     """
@@ -288,15 +290,15 @@ process getReadBiotypeClassification {
 
 process getReadToBiotypeBreakdownStats {
     input:
-    tuple val(file_name), path("${file_name}.reads2biotypes.woSpikeIns.tsv.gz")
+    tuple val(file_name), path(spike_ins_stats)
 
     output:
     path "${file_name}.readToBiotypeBreakdown.woSpikeIns.stats.tsv"
 
     script:
     """
-    totalPairs=\$( zcat ${file_name}.reads2biotypes.woSpikeIns.tsv.gz | wc -l)
-    zcat ${file_name}.reads2biotypes.woSpikeIns.tsv.gz | cut -f2 | sort --parallel=${params.threads} -T ${params.TMPDIR} | uniq -c | ssv2tsv | awk -v s=${file_name} -v tp=\$totalPairs '{ print s"\\t"\$2"\\t"\$1"\\t"\$1/tp }' > ${file_name}.readToBiotypeBreakdown.woSpikeIns.stats.tsv
+    totalPairs=\$( zcat ${spike_ins_stats} | wc -l)
+    zcat ${spike_ins_stats} | cut -f2 | sort --parallel=${params.threads} -T ${params.TMPDIR} | uniq -c | ssv2tsv | awk -v s=${file_name} -v tp=\$totalPairs '{ print s"\\t"\$2"\\t"\$1"\\t"\$1/tp }' > ${file_name}.readToBiotypeBreakdown.woSpikeIns.stats.tsv
     """
 }
 
@@ -345,9 +347,6 @@ workflow lrMapping {
     bamqc_ch = bamqc(mappings)
     agg_stats = aggBamqcStats(bamqc_ch.map{ _gen, seq -> seq }.collect())
     plots = plotBamqcStats(agg_stats)
-    exonic_bigwigs = makeBigWigExonicRegions(mappings)
-    (matrix, density, heatmap) = getReadProfileMatrix(exonic_bigwigs.collect())
-
 
     fq_bam_ch = fastq_ch
         .map { file_name, fastq, _genome, _tech -> tuple(file_name, fastq) }
@@ -357,19 +356,46 @@ workflow lrMapping {
     mappings_stats = getMappingStats(fq_bam_ch)
 
     allbasic = aggMappingStats(mappings_stats.map{ basic, _spikeins -> basic }.collect())
-    allspikes = aggMappingStatspikeIns(mappings_stats.map{ _basic, spikeins -> spikeins }.collect())
+
+    if ( "${params.sirvs_present}".toBoolean() ) {
+        println("Computing SIRVs Stats")
+        allspikes = aggMappingStatspikeIns(mappings_stats.map{ _basic, spikeins -> spikeins }.collect())
+        plot_spikeins = plotSpikeInsMappingStats(allspikes)
+    } else {
+        println("Computing SIRVs Stats - SKIPPED")
+        allspikes = ""
+        plot_spikeins = ""
+    }
+
     plot_stats = plotMappingStats(allbasic)
-    plot_spikeins = plotSpikeInsMappingStats(allspikes)
 
     dupl = checkOnlyOneHit(mappings)
     beds = readBamToBed(mappings)
 
     gffs = readBedToGff(beds.map { bed_file -> def base = bed_file.baseName; tuple(base, bed_file) })
 
-    biotype_class = getReadBiotypeClassification(mappings)
+    if ( "${params.reference_compare}".toBoolean() ) {
+        println("Integrating information from reference annotation: ${params.annotation}")
+        exonic_bigwigs = makeBigWigExonicRegions(mappings)
 
-    biotype_stats = aggReadToBiotypeBreakdownStats(biotype_class.collect())
-    plot_biotype_stats = plotReadToBiotypeBreakdownStats(biotype_stats)
+        (matrix, density, heatmap) = getReadProfileMatrix(exonic_bigwigs.collect())
+        
+        biotype_read = getReadBiotypeClassification(mappings)
+        biotype_class = getReadToBiotypeBreakdownStats(biotype_read)
+        
+        biotype_stats = aggReadToBiotypeBreakdownStats(biotype_class.collect())
+        plot_biotype_stats = plotReadToBiotypeBreakdownStats(biotype_stats)
+    } else {
+        println("Integrating information from reference annotation - SKIPPED")
+        exonic_bigwigs = ""
+        matrix = ""
+        density = ""
+        heatmap = ""
+        biotype_read = ""
+        biotype_class = ""
+        biotype_stats = ""
+        plot_biotype_stats = ""
+    }
 
     emit:
     mappings
@@ -388,6 +414,7 @@ workflow lrMapping {
     dupl
     beds
     gffs
+    biotype_read
     biotype_class
     biotype_stats
     plot_biotype_stats

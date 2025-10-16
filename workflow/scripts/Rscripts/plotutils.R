@@ -18,7 +18,7 @@ build_data <- function(data) {
 
 
 facets <- function(plt, samples) {
-    if (ncol(annotation) == 3 && length(unique(annotation[3])) == 1) {
+    if (ncol(annotation) <= 3 && length(unique(annotation[3])) == 1) {
         return(plt)
     } else if (ncol(annotation) == 3) {
         facet_organisation <- paste("~", feature1)
@@ -28,7 +28,7 @@ facets <- function(plt, samples) {
         facet_organisation <- paste(feature1, "~", feature2, "+", feature3)
     }
 
-    plt <- plt + facet_wrap(as.formula(facet_organisation), nrow = samples)
+    plt <- plt + facet_wrap(as.formula(facet_organisation), nrow = samples, scales = "free")
     return(plt)
 }
 

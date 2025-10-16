@@ -1,11 +1,8 @@
 #!/usr/bin/env Rscript
 library(ggplot2)
-library(cowplot)
-library(plyr)
 library(scales)
 library(gridExtra)
 library(grid)
-library(ggplotify)
 library(data.table)
 
 dir <- Sys.getenv("BASE_PROJECT_DIR")
@@ -29,5 +26,5 @@ plt <- ggplot(data, aes(x = sample_name, y = readOverlapsPercent, fill = biotype
     coord_cartesian(ylim = c(0, 1)) +
     theme(axis.ticks.x = element_blank(), axis.text.x = element_blank())
 
-plt <- facets(plt, length(unique(dat$sample_name)))
-publish(plt, output_file, length(unique(dat$sample_name)))
+plt <- facets(plt, length(unique(data$sample_name)))
+publish(plt, output_file, length(unique(data$sample_name)))

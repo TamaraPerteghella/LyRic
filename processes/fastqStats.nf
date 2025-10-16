@@ -81,7 +81,7 @@ process aggReadLengthSummary {
     script:
     """
     head -n1 ${readlength_files[0]} > all.readlength.summary.tsv
-    tail -q -n+2 ${readlength_files} | sort --parallel=${params.threads} >> all.readlength.summary.tsv
+    tail -q -n+2 ${readlength_files} | sort --parallel=${params.threads} -T ${params.TMPDIR} >> all.readlength.summary.tsv
     """
 }
 

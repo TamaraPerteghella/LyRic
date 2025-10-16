@@ -56,13 +56,13 @@ workflow {
     plotfiles = fastqStats.out.read_length_plot
     tmpstatsfile = fastqStats.out.readlength_ch.map { t -> t[1] }.concat(fastqStats.out.readlength_summary_ch)
 
-    lrMapping(fastq_ch)
+    lrMapping(fastq_ch)   
     long_reads = lrMapping.out.mappings
     bwigs = lrMapping.out.bigwigs
 
     lr_bamqc = lrMapping.out.bamqc_ch
     lr_qc = lrMapping.out.dupl
-
+    
     statfiles = statfiles.concat(lrMapping.out.agg_stats).concat(lrMapping.out.matrix).concat(lrMapping.out.allbasic).concat(lrMapping.out.allspikes)
     plotfiles = plotfiles.concat(lrMapping.out.plots).concat(lrMapping.out.density).concat(lrMapping.out.heatmap).concat(lrMapping.out.plot_stats).concat(lrMapping.out.plot_spikeins)
 
@@ -71,9 +71,10 @@ workflow {
     lr_gffs = lrMapping.out.gffs
 
     biotype_class = lrMapping.out.biotype_class
+    tmpstatsfile = tmpstatsfile.concat(lrMapping.out.biotype_read)
     statfiles = statfiles.concat(lrMapping.out.biotype_stats)
     plotfiles = plotfiles.concat(lrMapping.out.plot_biotype_stats)
-
+    
     srMapping(fastq_ch.map{ file_name, _fastq, genome, _tech -> tuple(file_name, genome) })
 
     publish:
@@ -90,6 +91,7 @@ workflow {
     long_reads_gff = lr_gffs
     btp = biotype_class
 }
+//.findAll { it != null }
 
 output {
     qc {

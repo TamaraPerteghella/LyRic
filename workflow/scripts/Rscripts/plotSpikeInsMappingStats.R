@@ -14,6 +14,7 @@ output_file <- args[2]
 
 data <- read.table(input_file, header = TRUE, as.is = TRUE, sep = "\t")
 data <- build_data(data)
+data[is.na(data)] <- 0
 
 maxY <- max(data$percent)
 
@@ -29,4 +30,5 @@ plt <- ggplot(data, aes(x = sample_name, y = percent, fill = category)) +
     theme(axis.ticks.x = element_blank(), axis.text.x = element_blank())
 
 plt <- facets(plt, length(unique(data$sample_name)))
+
 publish(plt, output_file, length(unique(data$sample_name)))

@@ -22,6 +22,6 @@ plt <- ggplot(data, aes(x = sample_name, y = percentMappedReads, fill = tech)) +
     scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
     xlab("") +
     theme(axis.ticks.x = element_blank(), axis.text.x = element_blank())
-print(plt)
+
 plt <- facets(plt, length(unique(data$sample_name)))
 publish(plt, output_file, length(unique(data$sample_name)))
